@@ -49,19 +49,26 @@ override = true
 # addr   = "0x70285592c97965e811e0c6f98dccc3a9c2b4ad854b3594faab9597ada267b860"
 
 [dependencies.lending_core]
-local = "./local_dependencies/protocol/lending_core"
+git = "https://github.com/Sui-Volo/volo-smart-contracts.git"
+subdir = "volo-vault/local_dependencies/protocol/lending_core"
+rev = "main"
 
 [dependencies.Switchboard]
 # git = "https://github.com/Sui-Volo/vault-dependencies"
 # rev = "main"
 # subdir = "on_demand"
-local = "./local_dependencies/switchboard_sui/on_demand"
+git = "https://github.com/Sui-Volo/volo-smart-contracts.git"
+subdir = "volo-vault/local_dependencies/switchboard_sui/on_demand"
+rev = "main"
+
 
 [dependencies.suilend]
 # git = "https://github.com/Sui-Volo/vault-dependencies"
 # rev = "main"
 # subdir = "suilend_d/suilend"
-local = "./local_dependencies/suilend_d/suilend"
+git = "https://github.com/Sui-Volo/volo-smart-contracts.git"
+subdir = "volo-vault/local_dependencies/suilend_d/suilend"
+rev = "main"
 
 # [dependencies.CetusClmm]
 # local = "./local_dependencies/cetus-clmm-interface/sui/cetus_clmm"
@@ -74,7 +81,9 @@ local = "./local_dependencies/suilend_d/suilend"
 # git = "https://github.com/Sui-Volo/vault-dependencies"
 # rev = "main"
 # subdir = "mmt_v3"
-local = "./local_dependencies/mmt_v3"
+git = "https://github.com/Sui-Volo/volo-smart-contracts.git"
+subdir = "volo-vault/local_dependencies/mmt_v3"
+rev = "main"
 
 # [dev-dependencies.CetusClmm]
 # git      = "https://github.com/CetusProtocol/cetus-clmm-interface.git"
