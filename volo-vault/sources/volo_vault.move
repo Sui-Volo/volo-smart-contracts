@@ -1,3 +1,4 @@
+#[allow(deprecated_usage)]
 module volo_vault::vault;
 
 use std::ascii::String;
@@ -7,6 +8,7 @@ use sui::bag::{Self, Bag};
 use sui::balance::{Self, Balance};
 use sui::clock::Clock;
 use sui::coin::Coin;
+use sui::dynamic_field;
 use sui::event::emit;
 use sui::table::{Self, Table};
 use volo_vault::deposit_request::{Self, DepositRequest};
@@ -18,7 +20,7 @@ use volo_vault::withdraw_request::{Self, WithdrawRequest};
 
 // ---------------------  Constants  ---------------------//
 
-const VERSION: u64 = 1;
+const VERSION: u64 = 6;
 
 const VAULT_NORMAL_STATUS: u8 = 0;
 const VAULT_DURING_OPERATION_STATUS: u8 = 1;
@@ -41,8 +43,12 @@ const MAX_UPDATE_INTERVAL: u64 = 0; // max update interval 0
 
 const NORMAL_STATUS: u8 = 0;
 const PENDING_DEPOSIT_STATUS: u8 = 1;
+#[allow(unused_const)]
 const PENDING_WITHDRAW_STATUS: u8 = 2;
+#[allow(unused_const)]
 const PENDING_WITHDRAW_WITH_AUTO_TRANSFER_STATUS: u8 = 3;
+const PARALLEL_PENDING_DEPOSIT_WITHDRAW_STATUS: u8 = 4;
+const PARALLEL_PENDING_DEPOSIT_WITHDRAW_WITH_AUTO_TRANSFER_STATUS: u8 = 5;
 
 // --------------------- Errors ---------------------//
 
@@ -74,6 +80,9 @@ const ERR_VAULT_DURING_OPERATION: u64 = 5_025;
 const ERR_INVALID_COIN_ASSET_TYPE: u64 = 5_026;
 const ERR_OP_VALUE_UPDATE_NOT_ENABLED: u64 = 5_027;
 const ERR_NO_FREE_PRINCIPAL: u64 = 5_028;
+const ERR_SINGLE_VAULT_OPERATOR_NOT_FOUND: u64 = 5_029;
+const ERR_SINGLE_VAULT_OPERATOR_NOT_PAIRED: u64 = 5_030;
+const ERR_SINGLE_VAULT_OPERATOR_ALREADY_PAIRED: u64 = 5_031;
 
 // ---------------------  Roles  ---------------------//
 
@@ -89,6 +98,13 @@ public struct OperatorCap has key, store {
 public struct Operation has key, store {
     id: UID,
     freezed_operators: Table<address, bool>,
+    // dynamic fields
+    // - single_vault_operator_config: SingleVaultOperatorConfig,
+}
+
+// @note
+public struct SingleVaultOperatorConfig has store {
+    vault_to_operators: Table<address, vector<address>>,
 }
 
 // ---------------------  Objects  ---------------------//
@@ -127,6 +143,8 @@ public struct Vault<phantom T> has key, store {
     receipts: Table<address, VaultReceiptInfo>,
     // ---- Operation Value Update Record ---- //
     op_value_update_record: OperationValueUpdateRecord,
+    // ---- Dynamic Field ---- //
+    // - inner_assets: Bag
 }
 
 public struct RequestBuffer<phantom T> has store {
@@ -143,6 +161,14 @@ public struct OperationValueUpdateRecord has store {
     asset_types_borrowed: vector<String>,
     value_update_enabled: bool,
     asset_types_updated: Table<String, bool>,
+}
+
+//^ (v1.1Upgrade - new)
+public struct ReceiptCanBeCancelledFieldKey has copy, drop, store {}
+
+//^ (v1.1Upgrade - new)
+public struct ReceiptCanBeCancelled has store {
+    can_be_cancelled: bool,
 }
 
 // ---------------------  Events  ---------------------//
@@ -344,6 +370,19 @@ public struct LockingTimeForCancelRequestChanged has copy, drop {
     locking_time: u64,
 }
 
+public struct SingleVaultOperatorAdded has copy, drop {
+    vault_id: address,
+    operator_id: address,
+}
+
+public struct SingleVaultOperatorRemoved has copy, drop {
+    vault_id: address,
+    operator_id: address,
+}
+
+public struct SingleVaultOperatorConfigFieldKey has copy, drop, store {}
+public struct InnerAssetsKey has copy, drop, store {}
+
 // ---------------------  Init  ---------------------//
 
 fun init(ctx: &mut TxContext) {
@@ -384,12 +423,147 @@ public(package) fun assert_operator_not_freezed(operation: &Operation, cap: &Ope
     assert!(!operator_freezed(operation, cap_id), ERR_OPERATOR_FREEZED);
 }
 
+public(package) fun assert_operator_not_freezed_by_id(operation: &Operation, cap_id: address) {
+    assert!(!operator_freezed(operation, cap_id), ERR_OPERATOR_FREEZED);
+}
+
 public fun operator_freezed(operation: &Operation, op_cap_id: address): bool {
     if (operation.freezed_operators.contains(op_cap_id)) {
         *operation.freezed_operators.borrow(op_cap_id)
     } else {
         false
     }
+}
+
+// ^(v1.1 upgrade - new)
+public(package) fun operation_id_mut(operation: &mut Operation): &mut UID {
+    &mut operation.id
+}
+
+// ^(v1.1 upgrade - new)
+public fun vault_uid<PrincipalCoinType>(vault: &Vault<PrincipalCoinType>): &UID {
+    &vault.id
+}
+
+// ^(v1.1 upgrade - new)
+public(package) fun vault_id_mut<PrincipalCoinType>(
+    vault: &mut Vault<PrincipalCoinType>,
+): &mut UID {
+    &mut vault.id
+}
+
+// ^(v1.1 upgrade - new)
+public fun get_single_vault_operator_config_by_dynamic_field(
+    operation: &Operation,
+): &Table<address, vector<address>> {
+    let dynamic_field_key = SingleVaultOperatorConfigFieldKey {};
+    let dynamic_field_value = dynamic_field::borrow<
+        SingleVaultOperatorConfigFieldKey,
+        SingleVaultOperatorConfig,
+    >(
+        &operation.id,
+        dynamic_field_key,
+    );
+    &dynamic_field_value.vault_to_operators
+}
+
+// ^(v1.1 upgrade - new)
+public fun get_single_vault_operator_by_dynamic_field(
+    operation: &Operation,
+    vault_id: address,
+): &vector<address> {
+    let dynamic_field_key = SingleVaultOperatorConfigFieldKey {};
+    let dynamic_field_value = dynamic_field::borrow<
+        SingleVaultOperatorConfigFieldKey,
+        SingleVaultOperatorConfig,
+    >(
+        &operation.id,
+        dynamic_field_key,
+    );
+
+    // let operators = table::borrow<address, vector<address>>(dynamic_field_value, vault_id);
+    let operators = dynamic_field_value.vault_to_operators.borrow(vault_id);
+    operators
+}
+
+// ^(v1.1 upgrade - new)
+public fun assert_single_vault_operator_paired(
+    operation: &Operation,
+    vault_id: address,
+    operator_cap: &OperatorCap,
+) {
+    let operator_cap_id = operator_cap.operator_id();
+
+    let single_vault_operator_config = get_single_vault_operator_config_by_dynamic_field(operation);
+    let operators = table::borrow<address, vector<address>>(single_vault_operator_config, vault_id);
+
+    let (contains, _) = operators.index_of(&operator_cap_id);
+    assert!(contains, ERR_SINGLE_VAULT_OPERATOR_NOT_PAIRED);
+}
+
+// ^(v1.1 upgrade - new)
+public(package) fun add_dynamic_field_to_operation(operation: &mut Operation, ctx: &mut TxContext) {
+    let dynamic_field_key = SingleVaultOperatorConfigFieldKey {};
+    let dynamic_field_value = SingleVaultOperatorConfig {
+        vault_to_operators: table::new<address, vector<address>>(ctx),
+    };
+
+    dynamic_field::add(operation.operation_id_mut(), dynamic_field_key, dynamic_field_value);
+}
+
+// ^(v1.1 upgrade - new)
+public(package) fun set_single_vault_operator(
+    operation: &mut Operation,
+    vault_id: address,
+    operator: address,
+) {
+    let dynamic_field_key = SingleVaultOperatorConfigFieldKey {};
+    let dynamic_field_value = dynamic_field::borrow_mut<
+        SingleVaultOperatorConfigFieldKey,
+        SingleVaultOperatorConfig,
+    >(
+        operation.operation_id_mut(),
+        dynamic_field_key,
+    );
+
+    if (!dynamic_field_value.vault_to_operators.contains(vault_id)) {
+        dynamic_field_value.vault_to_operators.add(vault_id, vector::empty<address>());
+    };
+
+    let operators = dynamic_field_value.vault_to_operators.borrow_mut(vault_id);
+    assert!(!operators.contains(&operator), ERR_SINGLE_VAULT_OPERATOR_ALREADY_PAIRED);
+    operators.push_back(operator);
+
+    emit(SingleVaultOperatorAdded {
+        vault_id: vault_id,
+        operator_id: operator,
+    });
+}
+
+// ^(v1.1 upgrade - new)
+public(package) fun remove_single_vault_operator(
+    operation: &mut Operation,
+    vault_id: address,
+    operator: address,
+) {
+    // let dynamic_field_key = b"single_vault_operator_config";
+    let dynamic_field_key = SingleVaultOperatorConfigFieldKey {};
+    let dynamic_field_value = dynamic_field::borrow_mut<
+        SingleVaultOperatorConfigFieldKey,
+        SingleVaultOperatorConfig,
+    >(
+        operation.operation_id_mut(),
+        dynamic_field_key,
+    );
+    let operators = dynamic_field_value.vault_to_operators.borrow_mut(vault_id);
+    let (contains, index) = operators.index_of(&operator);
+    assert!(contains, ERR_SINGLE_VAULT_OPERATOR_NOT_FOUND);
+    operators.swap_remove(index);
+
+    emit(SingleVaultOperatorRemoved {
+        vault_id: vault_id,
+        operator_id: operator,
+    });
 }
 
 // ------------------  Admin Functions  ------------------------//
@@ -452,6 +626,8 @@ public fun create_vault<PrincipalCoinType>(_: &AdminCap, ctx: &mut TxContext) {
     // PrincipalCoinType is added by default
     // vault.add_new_coin_type_asset<PrincipalCoinType, PrincipalCoinType>();
     vault.set_new_asset_type(type_name::get<PrincipalCoinType>().into_string());
+
+    vault.init_inner_assets(ctx);
 
     transfer::share_object(vault);
 
@@ -683,10 +859,10 @@ public fun check_locking_time_for_cancel_request<PrincipalCoinType>(
 
     if (is_deposit) {
         let request = self.request_buffer.deposit_requests.borrow(request_id);
-        request.request_time() + self.locking_time_for_cancel_request <= clock.timestamp_ms()
+        request.request_time() + self.locking_time_for_cancel_request() <= clock.timestamp_ms()
     } else {
         let request = self.request_buffer.withdraw_requests.borrow(request_id);
-        request.request_time() + self.locking_time_for_cancel_request <= clock.timestamp_ms()
+        request.request_time() + self.locking_time_for_cancel_request() <= clock.timestamp_ms()
     }
 }
 
@@ -699,7 +875,7 @@ public fun check_locking_time_for_withdraw<PrincipalCoinType>(
     self.check_version();
 
     let receipt = self.receipts.borrow(receipt_id);
-    self.locking_time_for_withdraw + receipt.last_deposit_time() <= clock.timestamp_ms()
+    self.locking_time_for_withdraw() + receipt.last_deposit_time() <= clock.timestamp_ms()
 }
 
 // ---------------------  Request Deposit  ---------------------//
@@ -717,7 +893,12 @@ public(package) fun request_deposit<PrincipalCoinType>(
     assert!(self.contains_vault_receipt_info(receipt_id), ERR_RECEIPT_NOT_FOUND);
 
     let vault_receipt = &mut self.receipts[receipt_id];
-    assert!(vault_receipt.status() == NORMAL_STATUS, ERR_WRONG_RECEIPT_STATUS);
+    assert!(
+        vault_receipt.status() == NORMAL_STATUS || 
+        vault_receipt.status() == PENDING_WITHDRAW_STATUS || 
+        vault_receipt.status() == PENDING_WITHDRAW_WITH_AUTO_TRANSFER_STATUS,
+        ERR_WRONG_RECEIPT_STATUS,
+    );
 
     // Generate current request id
     let current_deposit_id = self.request_buffer.deposit_id_count;
@@ -772,7 +953,12 @@ public(package) fun cancel_deposit<PrincipalCoinType>(
     assert!(self.request_buffer.deposit_requests.contains(request_id), ERR_REQUEST_NOT_FOUND);
 
     let vault_receipt = &mut self.receipts[receipt_id];
-    assert!(vault_receipt.status() == PENDING_DEPOSIT_STATUS, ERR_WRONG_RECEIPT_STATUS);
+    assert!(
+        vault_receipt.status() == PENDING_DEPOSIT_STATUS || 
+        vault_receipt.status() == PARALLEL_PENDING_DEPOSIT_WITHDRAW_STATUS || 
+        vault_receipt.status() == PARALLEL_PENDING_DEPOSIT_WITHDRAW_WITH_AUTO_TRANSFER_STATUS,
+        ERR_WRONG_RECEIPT_STATUS,
+    );
 
     let deposit_request = &mut self.request_buffer.deposit_requests[request_id];
     assert!(receipt_id == deposit_request.receipt_id(), ERR_RECEIPT_ID_MISMATCH);
@@ -780,7 +966,7 @@ public(package) fun cancel_deposit<PrincipalCoinType>(
         deposit_request.request_time() + self.locking_time_for_cancel_request <= clock.timestamp_ms(),
         ERR_REQUEST_CANCEL_TIME_NOT_REACHED,
     );
-    assert!(deposit_request.recipient() == recipient, ERR_RECIPIENT_MISMATCH);
+    // assert!(deposit_request.recipient() == recipient, ERR_RECIPIENT_MISMATCH);
 
     // deposit_request.cancel(clock.timestamp_ms());
     vault_receipt.update_after_cancel_deposit(deposit_request.amount());
@@ -906,7 +1092,10 @@ public(package) fun request_withdraw<PrincipalCoinType>(
     assert!(self.contains_vault_receipt_info(receipt_id), ERR_RECEIPT_NOT_FOUND);
 
     let vault_receipt = &mut self.receipts[receipt_id];
-    assert!(vault_receipt.status() == NORMAL_STATUS, ERR_WRONG_RECEIPT_STATUS);
+    assert!(
+        vault_receipt.status() == NORMAL_STATUS || vault_receipt.status() == PENDING_DEPOSIT_STATUS,
+        ERR_WRONG_RECEIPT_STATUS,
+    );
     assert!(vault_receipt.shares() >= shares, ERR_EXCEED_RECEIPT_SHARES);
 
     // Generate request id
@@ -954,10 +1143,13 @@ public(package) fun cancel_withdraw<PrincipalCoinType>(
     assert!(self.request_buffer.withdraw_requests.contains(request_id), ERR_REQUEST_NOT_FOUND);
 
     let vault_receipt = &mut self.receipts[receipt_id];
-    // assert!(
-    //     vault_receipt.status() == PENDING_WITHDRAW_STATUS || vault_receipt.status() == PENDING_WITHDRAW_WITH_AUTO_TRANSFER_STATUS,
-    //     ERR_WRONG_RECEIPT_STATUS,
-    // );
+    assert!(
+        vault_receipt.status() == PENDING_WITHDRAW_STATUS || 
+        vault_receipt.status() == PENDING_WITHDRAW_WITH_AUTO_TRANSFER_STATUS ||
+        vault_receipt.status() == PARALLEL_PENDING_DEPOSIT_WITHDRAW_STATUS ||
+        vault_receipt.status() == PARALLEL_PENDING_DEPOSIT_WITHDRAW_WITH_AUTO_TRANSFER_STATUS,
+        ERR_WRONG_RECEIPT_STATUS,
+    );
 
     let withdraw_request = &mut self.request_buffer.withdraw_requests[request_id];
     assert!(receipt_id == withdraw_request.receipt_id(), ERR_RECEIPT_ID_MISMATCH);
@@ -1142,7 +1334,8 @@ public fun update_coin_type_asset_value<PrincipalCoinType, CoinType>(
     let asset_type = type_name::get<CoinType>().into_string();
     let now = clock.timestamp_ms();
 
-    let coin_amount = self.assets.borrow<String, Balance<CoinType>>(asset_type).value() as u256;
+    let coin_amount =
+        self.inner_assets_mut().borrow<String, Balance<CoinType>>(asset_type).value() as u256;
     let price = vault_oracle::get_normalized_asset_price(
         config,
         clock,
@@ -1347,7 +1540,7 @@ public(package) fun contains_asset_type<PrincipalCoinType>(
     self: &Vault<PrincipalCoinType>,
     asset_type: String,
 ): bool {
-    self.assets.contains(asset_type)
+    self.inner_assets().contains(asset_type)
 }
 
 public(package) fun set_new_asset_type<PrincipalCoinType>(
@@ -1358,7 +1551,6 @@ public(package) fun set_new_asset_type<PrincipalCoinType>(
     // self.assert_normal();
     self.assert_enabled();
 
-    // assert!(!self.assets.contains(asset_type), ERR_ASSET_TYPE_ALREADY_EXISTS);
     assert!(!self.asset_types.contains(&asset_type), ERR_ASSET_TYPE_ALREADY_EXISTS);
 
     self.asset_types.push_back(asset_type);
@@ -1382,7 +1574,7 @@ public(package) fun add_new_defi_asset<PrincipalCoinType, AssetType: key + store
 
     let asset_type = vault_utils::parse_key<AssetType>(idx);
     set_new_asset_type(self, asset_type);
-    self.assets.add<String, AssetType>(asset_type, asset);
+    self.inner_assets_mut().add<String, AssetType>(asset_type, asset);
 }
 
 // Remove a supported defi asset from the vault (only by operator)
@@ -1409,7 +1601,7 @@ public(package) fun remove_defi_asset_support<PrincipalCoinType, AssetType: key 
         asset_type: asset_type,
     });
 
-    self.assets.remove<String, AssetType>(asset_type)
+    self.inner_assets_mut().remove<String, AssetType>(asset_type)
 }
 
 public(package) fun borrow_defi_asset<PrincipalCoinType, AssetType: key + store>(
@@ -1430,7 +1622,7 @@ public(package) fun borrow_defi_asset<PrincipalCoinType, AssetType: key + store>
         asset_type: asset_type,
     });
 
-    self.assets.remove<String, AssetType>(asset_type)
+    self.inner_assets_mut().remove<String, AssetType>(asset_type)
 }
 
 public(package) fun return_defi_asset<PrincipalCoinType, AssetType: key + store>(
@@ -1445,14 +1637,66 @@ public(package) fun return_defi_asset<PrincipalCoinType, AssetType: key + store>
         asset_type: asset_type,
     });
 
-    self.assets.add<String, AssetType>(asset_type, asset);
+    self.inner_assets_mut().add<String, AssetType>(asset_type, asset);
 }
 
+// deprecated
+#[allow(unused_variable)]
 public fun get_defi_asset<PrincipalCoinType, AssetType: key + store>(
     self: &Vault<PrincipalCoinType>,
     asset_type: String,
 ): &AssetType {
-    self.assets.borrow<String, AssetType>(asset_type)
+    abort 0
+}
+
+public(package) fun get_defi_asset_inner<PrincipalCoinType, AssetType: key + store>(
+    self: &Vault<PrincipalCoinType>,
+    asset_type: String,
+): &AssetType {
+    self.inner_assets().borrow<String, AssetType>(asset_type)
+}
+
+// ---------- Inner Assets ---------- //
+fun inner_assets<PrincipalCoinType>(self: &Vault<PrincipalCoinType>): &Bag {
+    dynamic_field::borrow<InnerAssetsKey, Bag>(&self.id, InnerAssetsKey {})
+}
+
+fun inner_assets_mut<PrincipalCoinType>(self: &mut Vault<PrincipalCoinType>): &mut Bag {
+    dynamic_field::borrow_mut<InnerAssetsKey, Bag>(&mut self.id, InnerAssetsKey {})
+}
+
+public fun init_inner_assets_by_admin<PrincipalCoinType>(
+    self: &mut Vault<PrincipalCoinType>,
+    _: &AdminCap,
+    ctx: &mut TxContext,
+) {
+    self.init_inner_assets(ctx)
+}
+
+fun init_inner_assets<PrincipalCoinType>(self: &mut Vault<PrincipalCoinType>, ctx: &mut TxContext) {
+    dynamic_field::add<InnerAssetsKey, Bag>(&mut self.id, InnerAssetsKey {}, bag::new(ctx));
+}
+
+public fun migrate_defi_asset<PrincipalCoinType, AssetType: key + store>(
+    self: &mut Vault<PrincipalCoinType>,
+    asset_type: String,
+    _: &AdminCap,
+) {
+    self.check_version();
+
+    let asset = self.assets.remove<String, AssetType>(asset_type);
+    self.inner_assets_mut().add(asset_type, asset);
+}
+
+public fun migrate_coin_type_asset<PrincipalCoinType, CoinType>(
+    self: &mut Vault<PrincipalCoinType>,
+    asset_type: String,
+    _: &AdminCap,
+) {
+    self.check_version();
+
+    let asset = self.assets.remove<String, Balance<CoinType>>(asset_type);
+    self.inner_assets_mut().add(asset_type, asset);
 }
 
 //------------- Coin-Type Asset -----------------//
@@ -1472,7 +1716,7 @@ public(package) fun add_new_coin_type_asset<PrincipalCoinType, AssetType>(
     set_new_asset_type(self, asset_type);
 
     // Add the asset to the assets table (initial as 0 balance)
-    self.assets.add(asset_type, balance::zero<AssetType>());
+    self.inner_assets_mut().add(asset_type, balance::zero<AssetType>());
 }
 
 public(package) fun remove_coin_type_asset<PrincipalCoinType, AssetType>(
@@ -1492,7 +1736,7 @@ public(package) fun remove_coin_type_asset<PrincipalCoinType, AssetType>(
     self.asset_types.remove(index);
 
     // The coin type asset must have 0 balance
-    let removed_balance = self.assets.remove<String, Balance<AssetType>>(asset_type);
+    let removed_balance = self.inner_assets_mut().remove<String, Balance<AssetType>>(asset_type);
     removed_balance.destroy_zero();
 
     self.assets_value.remove(asset_type);
@@ -1518,7 +1762,9 @@ public(package) fun borrow_coin_type_asset<PrincipalCoinType, AssetType>(
         self.op_value_update_record.asset_types_borrowed.push_back(asset_type);
     };
 
-    let current_balance = self.assets.borrow_mut<String, Balance<AssetType>>(asset_type);
+    let current_balance = self
+        .inner_assets_mut()
+        .borrow_mut<String, Balance<AssetType>>(asset_type);
     current_balance.split(amount)
 }
 
@@ -1533,7 +1779,9 @@ public(package) fun return_coin_type_asset<PrincipalCoinType, AssetType>(
 
     let asset_type = type_name::get<AssetType>().into_string();
 
-    let current_balance = self.assets.borrow_mut<String, Balance<AssetType>>(asset_type);
+    let current_balance = self
+        .inner_assets_mut()
+        .borrow_mut<String, Balance<AssetType>>(asset_type);
     current_balance.join(amount);
 }
 
@@ -1701,6 +1949,11 @@ public fun deposit_id_count<PrincipalCoinType>(self: &Vault<PrincipalCoinType>):
     request_buffer.deposit_id_count
 }
 
+public fun withdraw_id_count<PrincipalCoinType>(self: &Vault<PrincipalCoinType>): u64 {
+    let request_buffer = &self.request_buffer;
+    request_buffer.withdraw_id_count
+}
+
 public fun vault_receipt_info<PrincipalCoinType>(
     self: &Vault<PrincipalCoinType>,
     receipt_id: address,
@@ -1797,4 +2050,29 @@ public fun set_asset_value<PrincipalCoinType>(
 #[test_only]
 public fun remove_claimable_principal<T>(self: &mut Vault<T>, amount: u64): Balance<T> {
     self.claimable_principal.split(amount)
+}
+
+#[test_only]
+public fun add_legacy_defi_asset_for_testing<PrincipalCoinType, AssetType: key + store>(
+    self: &mut Vault<PrincipalCoinType>,
+    asset_type: String,
+    asset: AssetType,
+) {
+    self.assets.add<String, AssetType>(asset_type, asset);
+}
+
+#[test_only]
+public fun legacy_assets_contains<PrincipalCoinType>(
+    self: &Vault<PrincipalCoinType>,
+    asset_type: String,
+): bool {
+    self.assets.contains<String>(asset_type)
+}
+
+#[test_only]
+public fun set_new_asset_type_for_testing<PrincipalCoinType>(
+    self: &mut Vault<PrincipalCoinType>,
+    asset_type: String,
+) {
+    set_new_asset_type(self, asset_type);
 }

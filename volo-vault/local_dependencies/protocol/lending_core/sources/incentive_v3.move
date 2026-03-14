@@ -17,7 +17,7 @@ module lending_core::incentive_v3 {
     use sui::vec_map::{Self, VecMap};
     use sui::tx_context::{Self, TxContext};
 
-    use math::ray_math::{Self};
+    use lending_core::ray_math::{Self};
     use lending_core::error::{Self};
     use lending_core::pool::{Pool};
     use lending_core::version::{Self};

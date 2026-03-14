@@ -5,7 +5,7 @@ module lending_core::lending {
     use sui::clock::{Clock};
     use sui::coin::{Self, Coin};
     use sui::tx_context::{Self, TxContext};
-    use utils::utils;
+    use lending_core::utils;
     use oracle::oracle::{Self, PriceOracle};
 
     use lending_core::logic::{Self};
@@ -18,9 +18,6 @@ module lending_core::lending {
 
     friend lending_core::incentive_v2;
     friend lending_core::incentive_v3;
-
-    #[test_only]
-    friend lending_core::base_lending_tests;
 
     // Event
     struct DepositEvent has copy, drop {

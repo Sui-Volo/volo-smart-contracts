@@ -1,0 +1,9 @@
+{
+    "zo_staking": {
+        "pools": [],
+        "upgrade_cap": "0x22324520d74c29fd5f6e4e8cebca07f94d393c290dcee177aef2fbb934301cea",
+        "package": "0x34d5d9cccf4d38c0ce801be5cb5d97da07d02c01a5dd67bb9ab7c016bb52929d",
+        "admin_cap": "0x99a262cfb960197ac16dd8c7178044feb63a58dd1a866024088055e17187a743",
+        "acl_control": "0x12d8f08179197b37a9742f56f8fa32780a9247c85ae91c3097a9437446484795"
+    }
+}

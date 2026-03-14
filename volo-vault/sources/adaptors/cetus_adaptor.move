@@ -1,3 +1,4 @@
+#[allow(deprecated_usage)]
 module volo_vault::cetus_adaptor;
 
 use cetusclmm::pool::Pool as CetusPool;
@@ -23,7 +24,7 @@ public fun update_cetus_position_value<PrincipalCoinType, CoinA, CoinB>(
     asset_type: String,
     pool: &mut CetusPool<CoinA, CoinB>,
 ) {
-    let cetus_position = vault.get_defi_asset<PrincipalCoinType, CetusPosition>(asset_type);
+    let cetus_position = vault.get_defi_asset_inner<PrincipalCoinType, CetusPosition>(asset_type);
     let usd_value = calculate_cetus_position_value(pool, cetus_position, config, clock);
 
     vault.finish_update_asset_value(asset_type, usd_value, clock.timestamp_ms());

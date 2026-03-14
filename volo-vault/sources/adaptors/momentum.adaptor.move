@@ -1,3 +1,4 @@
+#[allow(deprecated_usage)]
 module volo_vault::momentum_adaptor;
 
 use mmt_v3::liquidity_math;
@@ -25,7 +26,7 @@ public fun update_momentum_position_value<PrincipalCoinType, CoinA, CoinB>(
     asset_type: String,
     pool: &mut MomentumPool<CoinA, CoinB>,
 ) {
-    let position = vault.get_defi_asset<PrincipalCoinType, MomentumPosition>(asset_type);
+    let position = vault.get_defi_asset_inner<PrincipalCoinType, MomentumPosition>(asset_type);
     let usd_value = get_position_value(pool, position, config, clock);
 
     vault.finish_update_asset_value(asset_type, usd_value, clock.timestamp_ms());

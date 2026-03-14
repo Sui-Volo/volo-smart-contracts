@@ -1,8 +1,6 @@
+#[allow(deprecated_usage)]
 module volo_vault::operation;
 
-use cetusclmm::position::Position as CetusPosition;
-use lending_core::account::AccountCap as NaviAccountCap;
-use mmt_v3::position::Position as MomentumPosition;
 use std::ascii::String;
 use std::type_name::{Self, TypeName};
 use sui::address;
@@ -11,8 +9,8 @@ use sui::balance::{Self, Balance};
 use sui::clock::Clock;
 use sui::coin::Coin;
 use sui::event::emit;
-use suilend::lending_market::ObligationOwnerCap as SuilendObligationOwnerCap;
 use volo_vault::receipt::Receipt;
+use volo_vault::receipt_cancellation;
 use volo_vault::reward_manager::RewardManager;
 use volo_vault::vault::{Self, Vault, Operation, OperatorCap};
 use volo_vault::vault_oracle::OracleConfig;
@@ -29,6 +27,7 @@ const ERR_VERIFY_SHARE: u64 = 1_001;
 const ERR_ASSETS_LENGTH_MISMATCH: u64 = 1_002;
 const ERR_ASSETS_NOT_RETURNED: u64 = 1_003;
 const ERR_VAULT_ID_MISMATCH: u64 = 1_004;
+const ERR_INVALID_DEFI_ASSET_TYPE: u64 = 1_005;
 
 // ----------------------  Events  ----------------------------//
 
@@ -91,7 +90,7 @@ public struct TxBagForCheckValueUpdate {
     total_shares: u256,
 }
 
-public fun start_op_with_bag<T, CoinType, ObligationType>(
+public fun start_op_with_bag_v2<T, CoinType, DefiAssetType: key + store>(
     vault: &mut Vault<T>,
     operation: &Operation,
     cap: &OperatorCap,
@@ -103,6 +102,8 @@ public fun start_op_with_bag<T, CoinType, ObligationType>(
     ctx: &mut TxContext,
 ): (Bag, TxBag, TxBagForCheckValueUpdate, Balance<T>, Balance<CoinType>) {
     vault::assert_operator_not_freezed(operation, cap);
+    vault::assert_single_vault_operator_paired(operation, vault.vault_id(), cap);
+
     pre_vault_check(vault, ctx);
 
     let mut defi_assets = bag::new(ctx);
@@ -115,47 +116,14 @@ public fun start_op_with_bag<T, CoinType, ObligationType>(
         let defi_asset_id = defi_asset_ids[i];
         let defi_asset_type = defi_asset_types[i];
 
-        if (defi_asset_type == type_name::get<NaviAccountCap>()) {
-            let navi_asset_type = vault_utils::parse_key<NaviAccountCap>(defi_asset_id);
-            let navi_account_cap = vault.borrow_defi_asset<T, NaviAccountCap>(
-                vault_utils::parse_key<NaviAccountCap>(defi_asset_id),
+        if (defi_asset_type == type_name::get<DefiAssetType>()) {
+            let defi_asset_type = vault_utils::parse_key<DefiAssetType>(defi_asset_id);
+            let defi_asset = vault.borrow_defi_asset<T, DefiAssetType>(
+                defi_asset_type,
             );
-            defi_assets.add<String, NaviAccountCap>(navi_asset_type, navi_account_cap);
-        };
-
-        if (defi_asset_type == type_name::get<CetusPosition>()) {
-            let cetus_asset_type = vault_utils::parse_key<CetusPosition>(defi_asset_id);
-            let cetus_position = vault.borrow_defi_asset<T, CetusPosition>(cetus_asset_type);
-            defi_assets.add<String, CetusPosition>(cetus_asset_type, cetus_position);
-        };
-
-        if (defi_asset_type == type_name::get<SuilendObligationOwnerCap<ObligationType>>()) {
-            let obligation_asset_type = vault_utils::parse_key<
-                SuilendObligationOwnerCap<ObligationType>,
-            >(
-                defi_asset_id,
-            );
-            let obligation = vault.borrow_defi_asset<T, SuilendObligationOwnerCap<ObligationType>>(
-                obligation_asset_type,
-            );
-            defi_assets.add<String, SuilendObligationOwnerCap<ObligationType>>(
-                obligation_asset_type,
-                obligation,
-            );
-        };
-
-        if (defi_asset_type == type_name::get<MomentumPosition>()) {
-            let momentum_asset_type = vault_utils::parse_key<MomentumPosition>(defi_asset_id);
-            let momentum_position = vault.borrow_defi_asset<T, MomentumPosition>(
-                momentum_asset_type,
-            );
-            defi_assets.add<String, MomentumPosition>(momentum_asset_type, momentum_position);
-        };
-
-        if (defi_asset_type == type_name::get<Receipt>()) {
-            let receipt_asset_type = vault_utils::parse_key<Receipt>(defi_asset_id);
-            let receipt = vault.borrow_defi_asset<T, Receipt>(receipt_asset_type);
-            defi_assets.add<String, Receipt>(receipt_asset_type, receipt);
+            defi_assets.add<String, DefiAssetType>(defi_asset_type, defi_asset);
+        } else {
+            assert!(false, ERR_INVALID_DEFI_ASSET_TYPE);
         };
 
         i = i + 1;
@@ -206,7 +174,7 @@ public fun start_op_with_bag<T, CoinType, ObligationType>(
     (defi_assets, tx, tx_for_check_value_update, principal_balance, coin_type_asset_balance)
 }
 
-public fun end_op_with_bag<T, CoinType, ObligationType>(
+public fun end_op_with_bag_v2<T, CoinType, DefiAssetType: key + store>(
     vault: &mut Vault<T>,
     operation: &Operation,
     cap: &OperatorCap,
@@ -216,6 +184,7 @@ public fun end_op_with_bag<T, CoinType, ObligationType>(
     coin_type_asset_balance: Balance<CoinType>,
 ) {
     vault::assert_operator_not_freezed(operation, cap);
+    vault::assert_single_vault_operator_paired(operation, vault.vault_id(), cap);
     vault.assert_during_operation();
 
     let TxBag {
@@ -232,42 +201,20 @@ public fun end_op_with_bag<T, CoinType, ObligationType>(
         let defi_asset_id = defi_asset_ids[i];
         let defi_asset_type = defi_asset_types[i];
 
-        if (defi_asset_type == type_name::get<NaviAccountCap>()) {
-            let navi_asset_type = vault_utils::parse_key<NaviAccountCap>(defi_asset_id);
-            let navi_account_cap = defi_assets.remove<String, NaviAccountCap>(navi_asset_type);
-            vault.return_defi_asset(navi_asset_type, navi_account_cap);
-        };
+        if (defi_asset_type == type_name::get<DefiAssetType>()) {
+            let defi_asset_type_string = vault_utils::parse_key<DefiAssetType>(defi_asset_id);
 
-        if (defi_asset_type == type_name::get<CetusPosition>()) {
-            let cetus_asset_type = vault_utils::parse_key<CetusPosition>(defi_asset_id);
-            let cetus_position = defi_assets.remove<String, CetusPosition>(cetus_asset_type);
-            vault.return_defi_asset(cetus_asset_type, cetus_position);
-        };
+            if (defi_asset_type == type_name::get<Receipt>()) {
+                let receipt = defi_assets.remove<String, Receipt>(defi_asset_type_string);
+                receipt_cancellation::assert_receipt_can_not_be_cancelled(&receipt);
 
-        if (defi_asset_type == type_name::get<SuilendObligationOwnerCap<ObligationType>>()) {
-            let suilend_asset_type = vault_utils::parse_key<
-                SuilendObligationOwnerCap<ObligationType>,
-            >(
-                defi_asset_id,
-            );
-            let obligation = defi_assets.remove<String, SuilendObligationOwnerCap<ObligationType>>(
-                suilend_asset_type,
-            );
-            vault.return_defi_asset(suilend_asset_type, obligation);
-        };
-
-        if (defi_asset_type == type_name::get<MomentumPosition>()) {
-            let momentum_asset_type = vault_utils::parse_key<MomentumPosition>(defi_asset_id);
-            let momentum_position = defi_assets.remove<String, MomentumPosition>(
-                momentum_asset_type,
-            );
-            vault.return_defi_asset(momentum_asset_type, momentum_position);
-        };
-
-        if (defi_asset_type == type_name::get<Receipt>()) {
-            let receipt_asset_type = vault_utils::parse_key<Receipt>(defi_asset_id);
-            let receipt = defi_assets.remove<String, Receipt>(receipt_asset_type);
-            vault.return_defi_asset(receipt_asset_type, receipt);
+                vault.return_defi_asset(defi_asset_type_string, receipt);
+            } else {
+                let defi_asset = defi_assets.remove<String, DefiAssetType>(defi_asset_type_string);
+                vault.return_defi_asset(defi_asset_type_string, defi_asset);
+            }
+        } else {
+            assert!(false, ERR_INVALID_DEFI_ASSET_TYPE);
         };
 
         i = i + 1;
@@ -296,7 +243,7 @@ public fun end_op_with_bag<T, CoinType, ObligationType>(
     defi_assets.destroy_empty();
 }
 
-public fun end_op_value_update_with_bag<T, ObligationType>(
+public fun end_op_value_update_with_bag_v2<T, DefiAssetType: key + store>(
     vault: &mut Vault<T>,
     operation: &Operation,
     cap: &OperatorCap,
@@ -304,6 +251,7 @@ public fun end_op_value_update_with_bag<T, ObligationType>(
     tx: TxBagForCheckValueUpdate,
 ) {
     vault::assert_operator_not_freezed(operation, cap);
+    vault::assert_single_vault_operator_paired(operation, vault.vault_id(), cap);
     vault.assert_during_operation();
 
     let TxBagForCheckValueUpdate {
@@ -323,28 +271,11 @@ public fun end_op_value_update_with_bag<T, ObligationType>(
         let defi_asset_id = defi_asset_ids[i];
         let defi_asset_type = defi_asset_types[i];
 
-        if (defi_asset_type == type_name::get<NaviAccountCap>()) {
-            let navi_asset_type = vault_utils::parse_key<NaviAccountCap>(defi_asset_id);
-            assert!(vault.contains_asset_type(navi_asset_type), ERR_ASSETS_NOT_RETURNED);
-        };
-
-        if (defi_asset_type == type_name::get<CetusPosition>()) {
-            let cetus_asset_type = vault_utils::parse_key<CetusPosition>(defi_asset_id);
-            assert!(vault.contains_asset_type(cetus_asset_type), ERR_ASSETS_NOT_RETURNED);
-        };
-
-        if (defi_asset_type == type_name::get<SuilendObligationOwnerCap<ObligationType>>()) {
-            let suilend_asset_type = vault_utils::parse_key<
-                SuilendObligationOwnerCap<ObligationType>,
-            >(
-                defi_asset_id,
-            );
-            assert!(vault.contains_asset_type(suilend_asset_type), ERR_ASSETS_NOT_RETURNED);
-        };
-
-        if (defi_asset_type == type_name::get<MomentumPosition>()) {
-            let momentum_asset_type = vault_utils::parse_key<MomentumPosition>(defi_asset_id);
-            assert!(vault.contains_asset_type(momentum_asset_type), ERR_ASSETS_NOT_RETURNED);
+        if (defi_asset_type == type_name::get<DefiAssetType>()) {
+            let defi_asset_type = vault_utils::parse_key<DefiAssetType>(defi_asset_id);
+            assert!(vault.contains_asset_type(defi_asset_type), ERR_ASSETS_NOT_RETURNED);
+        } else {
+            assert!(false, ERR_INVALID_DEFI_ASSET_TYPE);
         };
 
         i = i + 1;
@@ -376,6 +307,46 @@ public fun end_op_value_update_with_bag<T, ObligationType>(
     vault.clear_op_value_update_record();
 }
 
+#[allow(dead_code, unused_type_parameter)]
+public fun start_op_with_bag<T, CoinType, ObligationType>(
+    _vault: &mut Vault<T>,
+    _operation: &Operation,
+    _cap: &OperatorCap,
+    _clock: &Clock,
+    _defi_asset_ids: vector<u8>,
+    _defi_asset_types: vector<TypeName>,
+    _principal_amount: u64,
+    _coin_type_asset_amount: u64,
+    _ctx: &mut TxContext,
+): (Bag, TxBag, TxBagForCheckValueUpdate, Balance<T>, Balance<CoinType>) {
+    abort 0
+    
+}
+
+#[allow(dead_code, unused_type_parameter)]
+public fun end_op_with_bag<T, CoinType, ObligationType>(
+    _vault: &mut Vault<T>,
+    _operation: &Operation,
+    _cap: &OperatorCap,
+    mut _defi_assets: Bag,
+    _tx: TxBag,
+    _principal_balance: Balance<T>,
+    _coin_type_asset_balance: Balance<CoinType>,
+) {
+    abort 0
+}
+
+#[allow(dead_code, unused_type_parameter)]
+public fun end_op_value_update_with_bag<T, ObligationType>(
+    _vault: &mut Vault<T>,
+    _operation: &Operation,
+    _cap: &OperatorCap,
+    _clock: &Clock,
+    _tx: TxBagForCheckValueUpdate,
+) {
+    abort 0
+}
+
 // ------------------  Deposit & Withdraw  ------------------//
 
 public fun execute_deposit<PrincipalCoinType>(
@@ -389,6 +360,7 @@ public fun execute_deposit<PrincipalCoinType>(
     max_shares_received: u256,
 ) {
     vault::assert_operator_not_freezed(operation, cap);
+    vault::assert_single_vault_operator_paired(operation, vault.vault_id(), cap);
 
     reward_manager.update_reward_buffers(vault, clock);
 
@@ -414,6 +386,7 @@ public fun batch_execute_deposit<PrincipalCoinType>(
     max_shares_received: vector<u256>,
 ) {
     vault::assert_operator_not_freezed(operation, cap);
+    vault::assert_single_vault_operator_paired(operation, vault.vault_id(), cap);
 
     reward_manager.update_reward_buffers(vault, clock);
 
@@ -438,10 +411,16 @@ public fun cancel_user_deposit<PrincipalCoinType>(
     vault: &mut Vault<PrincipalCoinType>,
     request_id: u64,
     receipt_id: address,
-    recipient: address,
+    _recipient: address,
     clock: &Clock,
 ) {
     vault::assert_operator_not_freezed(operation, cap);
+    vault::assert_single_vault_operator_paired(operation, vault.vault_id(), cap);
+    receipt_cancellation::assert_receipt_can_be_cancelled_from_vault(vault, receipt_id);
+
+    let deposit_request = vault.deposit_request(request_id);
+    let recipient = deposit_request.recipient();
+
     let buffered_coin = vault.cancel_deposit(clock, request_id, receipt_id, recipient);
     transfer::public_transfer(buffered_coin, recipient);
 }
@@ -458,6 +437,7 @@ public fun execute_withdraw<PrincipalCoinType>(
     ctx: &mut TxContext,
 ) {
     vault::assert_operator_not_freezed(operation, cap);
+    vault::assert_single_vault_operator_paired(operation, vault.vault_id(), cap);
 
     reward_manager.update_reward_buffers(vault, clock);
 
@@ -490,8 +470,9 @@ public fun batch_execute_withdraw<PrincipalCoinType>(
     ctx: &mut TxContext,
 ) {
     vault::assert_operator_not_freezed(operation, cap);
-    reward_manager.update_reward_buffers(vault, clock);
+    vault::assert_single_vault_operator_paired(operation, vault.vault_id(), cap);
 
+    reward_manager.update_reward_buffers(vault, clock);
     request_ids.do!(|request_id| {
         let withdraw_request = vault.withdraw_request(request_id);
         reward_manager.update_receipt_reward(vault, withdraw_request.receipt_id());
@@ -523,6 +504,8 @@ public fun cancel_user_withdraw<PrincipalCoinType>(
     clock: &Clock,
 ): u256 {
     vault::assert_operator_not_freezed(operation, cap);
+    vault::assert_single_vault_operator_paired(operation, vault.vault_id(), cap);
+
     vault.cancel_withdraw(clock, request_id, receipt_id, recipient)
 }
 
@@ -535,6 +518,8 @@ public fun deposit_by_operator<PrincipalCoinType>(
     coin: Coin<PrincipalCoinType>,
 ) {
     vault::assert_operator_not_freezed(operation, cap);
+    vault::assert_single_vault_operator_paired(operation, vault.vault_id(), cap);
+
     vault.deposit_by_operator(
         clock,
         config,
@@ -550,6 +535,8 @@ public fun add_new_coin_type_asset<PrincipalCoinType, AssetType>(
     vault: &mut Vault<PrincipalCoinType>,
 ) {
     vault::assert_operator_not_freezed(operation, cap);
+    vault::assert_single_vault_operator_paired(operation, vault.vault_id(), cap);
+
     vault.add_new_coin_type_asset<PrincipalCoinType, AssetType>();
 }
 
@@ -559,6 +546,8 @@ public fun remove_coin_type_asset<PrincipalCoinType, AssetType>(
     vault: &mut Vault<PrincipalCoinType>,
 ) {
     vault::assert_operator_not_freezed(operation, cap);
+    vault::assert_single_vault_operator_paired(operation, vault.vault_id(), cap);
+
     vault.remove_coin_type_asset<PrincipalCoinType, AssetType>();
 }
 
@@ -570,7 +559,26 @@ public fun add_new_defi_asset<PrincipalCoinType, AssetType: key + store>(
     asset: AssetType,
 ) {
     vault::assert_operator_not_freezed(operation, cap);
+    vault::assert_single_vault_operator_paired(operation, vault.vault_id(), cap);
+    // ^v1.1 Upgrade(new)
+    assert!(type_name::with_defining_ids<AssetType>() != type_name::with_defining_ids<Receipt>(), ERR_INVALID_DEFI_ASSET_TYPE);
+
     vault.add_new_defi_asset(idx, asset);
+}
+
+public fun add_receipt_as_defi_asset<PrincipalCoinType>(
+    operation: &Operation,
+    cap: &OperatorCap,
+    vault: &mut Vault<PrincipalCoinType>,
+    idx: u8,
+    receipt: Receipt,
+) {
+    vault::assert_operator_not_freezed(operation, cap);
+    vault::assert_single_vault_operator_paired(operation, vault.vault_id(), cap);
+
+    receipt_cancellation::assert_receipt_can_not_be_cancelled(&receipt);
+
+    vault.add_new_defi_asset(idx, receipt);
 }
 
 public fun remove_defi_asset_support<PrincipalCoinType, AssetType: key + store>(
@@ -580,5 +588,7 @@ public fun remove_defi_asset_support<PrincipalCoinType, AssetType: key + store>(
     idx: u8,
 ): AssetType {
     vault::assert_operator_not_freezed(operation, cap);
+    vault::assert_single_vault_operator_paired(operation, vault.vault_id(), cap);
+
     vault.remove_defi_asset_support(idx)
 }

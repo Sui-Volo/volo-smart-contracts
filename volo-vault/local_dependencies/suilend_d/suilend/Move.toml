@@ -7,17 +7,19 @@ edition      = "2024.beta"
 [dependencies.Pyth]
 git    = "https://github.com/solendprotocol/pyth-crosschain.git"
 subdir = "target_chains/sui/contracts"
-rev    = "mainnet"
+rev    = "sui-contract-mainnet"
 
 [dependencies.liquid_staking]
-git    = "https://github.com/solendprotocol/liquid-staking.git"
-subdir = "contracts"
-rev    = "main"
+local = "../liquid-staking/contracts"
+# git    = "https://github.com/solendprotocol/liquid-staking.git"
+# subdir = "contracts"
+# rev    = "main"
 
 [dependencies.sprungsui]
 local = "../sprungsui"
 
 [addresses]
 sui = "0x2"
+sui_system = "0x3"
 # suilend = "0x0"
 suilend = "0xf95b06141ed4a174f239417323bde3f209b972f5930d8521ea38a52aff3a6ddf"

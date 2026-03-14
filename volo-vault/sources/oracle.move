@@ -8,7 +8,10 @@ use sui::table::{Self, Table};
 use switchboard::aggregator::Aggregator;
 
 // ---------------------  Constants  ---------------------//
-const VERSION: u64 = 2;
+// const VERSION: u64 = 2;
+// ^(v1.1 upgrade - new)
+const VERSION: u64 = 3;
+
 const MAX_UPDATE_INTERVAL: u64 = 1000 * 60; // 1 minute
 
 const DEFAULT_DEX_SLIPPAGE: u256 = 100; // 1%

@@ -1,0 +1,13 @@
+[package]
+name = "zo_staking"
+edition = "2024.beta"
+published-at = "0xf09eedd07bae94dd67d7593bda318ad361e8119445330e01cddf408908cdde8c"
+
+[dependencies.Sui]
+git = "https://github.com/MystenLabs/sui.git"
+subdir = "crates/sui-framework/packages/sui-framework"
+rev = "mainnet-v1.50.1"
+override = true
+
+[addresses]
+zo_staking = "0x87c13bb9157c3d51d61c7802704539d9d4782e838aadc41df0d6f0cc117298ba"

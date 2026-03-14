@@ -9,6 +9,7 @@ use volo_vault::vault_oracle::{Self, OracleConfig};
 use volo_vault::vault_utils;
 
 const PENDING_WITHDRAW_WITH_AUTO_TRANSFER_STATUS: u8 = 3;
+const PARALLEL_PENDING_DEPOSIT_WITHDRAW_WITH_AUTO_TRANSFER_STATUS: u8 = 5;
 
 // const ERR_NO_SELF_VAULT: u64 = 1_001;
 
@@ -28,7 +29,7 @@ public fun update_receipt_value<PrincipalCoinType, PrincipalCoinTypeB>(
     // );
     receipt_vault.assert_normal();
 
-    let receipt = vault.get_defi_asset<PrincipalCoinType, Receipt>(asset_type);
+    let receipt = vault.get_defi_asset_inner<PrincipalCoinType, Receipt>(asset_type);
 
     let usd_value = get_receipt_value(receipt_vault, config, receipt, clock);
 
@@ -38,6 +39,7 @@ public fun update_receipt_value<PrincipalCoinType, PrincipalCoinTypeB>(
 // * @dev Get receipt usd value
 // *      USD Value = Share Value + Pending Deposit Value + Claimable Principal Value
 // *      Share Value will not cover the part that is pending withdraw with auto transfer (avoid operator attack)
+#[allow(deprecated_usage)]
 public fun get_receipt_value<T>(
     vault: &Vault<T>,
     config: &OracleConfig,
@@ -52,7 +54,10 @@ public fun get_receipt_value<T>(
     let mut shares = vault_receipt.shares();
 
     // If the status is PENDING_WITHDRAW_WITH_AUTO_TRANSFER_STATUS, the share value part is 0
-    if (vault_receipt.status() == PENDING_WITHDRAW_WITH_AUTO_TRANSFER_STATUS) {
+    if (
+        vault_receipt.status() == PENDING_WITHDRAW_WITH_AUTO_TRANSFER_STATUS || 
+        vault_receipt.status() == PARALLEL_PENDING_DEPOSIT_WITHDRAW_WITH_AUTO_TRANSFER_STATUS
+    ) {
         shares = shares - vault_receipt.pending_withdraw_shares();
     };
 

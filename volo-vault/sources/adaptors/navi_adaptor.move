@@ -3,7 +3,7 @@ module volo_vault::navi_adaptor;
 use lending_core::account::AccountCap as NaviAccountCap;
 use lending_core::dynamic_calculator;
 use lending_core::storage::Storage;
-use math::ray_math;
+use lending_core::ray_math;
 use std::ascii::String;
 use sui::clock::Clock;
 use volo_vault::vault::Vault;
@@ -17,7 +17,7 @@ public fun update_navi_position_value<PrincipalCoinType>(
     asset_type: String,
     storage: &mut Storage,
 ) {
-    let account_cap = vault.get_defi_asset<PrincipalCoinType, NaviAccountCap>(asset_type);
+    let account_cap = vault.get_defi_asset_inner<PrincipalCoinType, NaviAccountCap>(asset_type);
     let usd_value = calculate_navi_position_value(
         account_cap.account_owner(),
         storage,

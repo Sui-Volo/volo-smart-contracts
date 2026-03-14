@@ -8,14 +8,14 @@ git = "https://github.com/MystenLabs/sui.git"
 subdir = "crates/sui-framework/packages/sui-framework"
 rev = "mainnet"
 
-[dependencies.math]
-local = "../math"
+# [dependencies.math]
+# local = "../math"
 
 [dependencies.oracle]
 local = "../oracle"
 
-[dependencies.utils]
-local = "../utils"
+# [dependencies.utils]
+# local = "../utils"
 
 [addresses]
 sui = "0x2"

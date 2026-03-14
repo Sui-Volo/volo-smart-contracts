@@ -1,3 +1,4 @@
+#[allow(deprecated_usage)]
 module volo_vault::vault_receipt_info;
 
 use std::type_name::{Self, TypeName};
@@ -6,10 +7,19 @@ use sui::event::emit;
 use sui::table::Table;
 use volo_vault::vault_utils;
 
+// status
+// - normal: no pending requests
+// - pending_deposit: a deposit request is pending
+// - pending_withdraw: a withdraw request is pending
+// - pending_withdraw_with_auto_transfer: a withdraw request with auto transfer is pending
+// - parallel_pending_deposit_withdraw: a deposit and withdraw request are pending
+// - parallel_pending_deposit_withdraw_with_auto_transfer: a deposit and withdraw request with auto transfer are pending
 const NORMAL_STATUS: u8 = 0;
 const PENDING_DEPOSIT_STATUS: u8 = 1;
 const PENDING_WITHDRAW_STATUS: u8 = 2;
 const PENDING_WITHDRAW_WITH_AUTO_TRANSFER_STATUS: u8 = 3;
+const PARALLEL_PENDING_DEPOSIT_WITHDRAW_STATUS: u8 = 4;
+const PARALLEL_PENDING_DEPOSIT_WITHDRAW_WITH_AUTO_TRANSFER_STATUS: u8 = 5;
 
 public struct VaultReceiptInfoUpdated has copy, drop {
     new_reward: u256,
@@ -17,7 +27,7 @@ public struct VaultReceiptInfoUpdated has copy, drop {
 }
 
 public struct VaultReceiptInfo has store {
-    status: u8, // 0: normal, 1: pending_deposit, 2: pending_withdraw
+    status: u8, // 0: normal, 1: pending_deposit, 2: pending_withdraw, 3: pending_withdraw_with_auto_transfer
     shares: u256,
     pending_deposit_balance: u64,
     pending_withdraw_shares: u256,
@@ -49,7 +59,14 @@ public(package) fun update_after_request_deposit(
     self: &mut VaultReceiptInfo,
     pending_deposit_balance: u64,
 ) {
-    self.status = PENDING_DEPOSIT_STATUS;
+    let current_status = self.status;
+    if (current_status == NORMAL_STATUS) {
+        self.status = PENDING_DEPOSIT_STATUS;
+    } else if (current_status == PENDING_WITHDRAW_STATUS) {
+        self.status = PARALLEL_PENDING_DEPOSIT_WITHDRAW_STATUS;
+    } else if (current_status == PENDING_WITHDRAW_WITH_AUTO_TRANSFER_STATUS) {
+        self.status = PARALLEL_PENDING_DEPOSIT_WITHDRAW_WITH_AUTO_TRANSFER_STATUS;
+    };
     self.pending_deposit_balance = self.pending_deposit_balance + pending_deposit_balance;
 }
 
@@ -58,7 +75,14 @@ public(package) fun update_after_cancel_deposit(
     self: &mut VaultReceiptInfo,
     cancelled_deposit_balance: u64,
 ) {
-    self.status = NORMAL_STATUS;
+    let current_status = self.status;
+    if (current_status == PENDING_DEPOSIT_STATUS) {
+        self.status = NORMAL_STATUS;
+    } else if (current_status == PARALLEL_PENDING_DEPOSIT_WITHDRAW_STATUS) {
+        self.status = PENDING_WITHDRAW_STATUS;
+    } else if (current_status == PARALLEL_PENDING_DEPOSIT_WITHDRAW_WITH_AUTO_TRANSFER_STATUS) {
+        self.status = PENDING_WITHDRAW_WITH_AUTO_TRANSFER_STATUS;
+    };
     self.pending_deposit_balance = self.pending_deposit_balance - cancelled_deposit_balance;
 }
 
@@ -69,7 +93,14 @@ public(package) fun update_after_execute_deposit(
     new_shares: u256,
     last_deposit_time: u64,
 ) {
-    self.status = NORMAL_STATUS;
+    let current_status = self.status;
+    if (current_status == PENDING_DEPOSIT_STATUS) {
+        self.status = NORMAL_STATUS;
+    } else if (current_status == PARALLEL_PENDING_DEPOSIT_WITHDRAW_STATUS) {
+        self.status = PENDING_WITHDRAW_STATUS;
+    } else if (current_status == PARALLEL_PENDING_DEPOSIT_WITHDRAW_WITH_AUTO_TRANSFER_STATUS) {
+        self.status = PENDING_WITHDRAW_WITH_AUTO_TRANSFER_STATUS;
+    };
     self.shares = self.shares + new_shares;
     self.pending_deposit_balance = self.pending_deposit_balance - executed_deposit_balance;
     self.last_deposit_time = last_deposit_time;
@@ -81,10 +112,20 @@ public(package) fun update_after_request_withdraw(
     pending_withdraw_shares: u256,
     recipient: address,
 ) {
-    self.status = if (recipient == address::from_u256(0)) {
-        PENDING_WITHDRAW_STATUS
-    } else {
-        PENDING_WITHDRAW_WITH_AUTO_TRANSFER_STATUS
+    let current_status = self.status;
+    let is_with_auto_transfer = recipient != address::from_u256(0);
+    if (current_status == NORMAL_STATUS) {
+        self.status = if (is_with_auto_transfer) {
+            PENDING_WITHDRAW_WITH_AUTO_TRANSFER_STATUS
+        } else {
+            PENDING_WITHDRAW_STATUS
+        };
+    } else if (current_status == PENDING_DEPOSIT_STATUS) {
+        self.status = if (is_with_auto_transfer) {
+            PARALLEL_PENDING_DEPOSIT_WITHDRAW_WITH_AUTO_TRANSFER_STATUS
+        } else {
+            PARALLEL_PENDING_DEPOSIT_WITHDRAW_STATUS
+        };
     };
     self.pending_withdraw_shares = self.pending_withdraw_shares + pending_withdraw_shares;
 }
@@ -94,7 +135,14 @@ public(package) fun update_after_cancel_withdraw(
     self: &mut VaultReceiptInfo,
     cancelled_withdraw_shares: u256,
 ) {
-    self.status = NORMAL_STATUS;
+    let current_status = self.status;
+    if (current_status == PENDING_WITHDRAW_STATUS || current_status == PENDING_WITHDRAW_WITH_AUTO_TRANSFER_STATUS) {
+        self.status = NORMAL_STATUS;
+    } else if (current_status == PARALLEL_PENDING_DEPOSIT_WITHDRAW_STATUS) {
+        self.status = PENDING_DEPOSIT_STATUS;
+    } else if (current_status == PARALLEL_PENDING_DEPOSIT_WITHDRAW_WITH_AUTO_TRANSFER_STATUS) {
+        self.status = PENDING_DEPOSIT_STATUS;
+    };
     self.pending_withdraw_shares = self.pending_withdraw_shares - cancelled_withdraw_shares;
 }
 
@@ -104,7 +152,14 @@ public(package) fun update_after_execute_withdraw(
     executed_withdraw_shares: u256,
     claimable_principal: u64,
 ) {
-    self.status = NORMAL_STATUS;
+    let current_status = self.status;
+    if (current_status == PENDING_WITHDRAW_STATUS || current_status == PENDING_WITHDRAW_WITH_AUTO_TRANSFER_STATUS) {
+        self.status = NORMAL_STATUS;
+    } else if (current_status == PARALLEL_PENDING_DEPOSIT_WITHDRAW_STATUS) {
+        self.status = PENDING_DEPOSIT_STATUS;
+    } else if (current_status == PARALLEL_PENDING_DEPOSIT_WITHDRAW_WITH_AUTO_TRANSFER_STATUS) {
+        self.status = PENDING_DEPOSIT_STATUS;
+    };
     self.shares = self.shares - executed_withdraw_shares;
     self.pending_withdraw_shares = self.pending_withdraw_shares - executed_withdraw_shares;
     self.claimable_principal = self.claimable_principal + claimable_principal;

@@ -23,6 +23,16 @@ public fun vault_id(self: &Receipt): address {
     self.vault_id
 }
 
+// ^(v1.1 upgrade - new)
+public(package) fun receipt_id_mut(receipt: &mut Receipt): &mut UID {
+    &mut receipt.id
+}
+
+// ^(v1.1 upgrade - new)
+public fun receipt_uid(receipt: &Receipt): &UID {
+    &receipt.id
+}
+
 // ------------------  Main Functions  ------------------//
 
 public(package) fun create_receipt(vault_id: address, ctx: &mut TxContext): Receipt {

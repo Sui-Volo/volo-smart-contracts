@@ -26,7 +26,7 @@ public fun update_suilend_position_value<PrincipalCoinType, ObligationType>(
     clock: &Clock,
     asset_type: String,
 ) {
-    let obligation_cap = vault.get_defi_asset<
+    let obligation_cap = vault.get_defi_asset_inner<
         PrincipalCoinType,
         SuilendObligationOwnerCap<ObligationType>,
     >(

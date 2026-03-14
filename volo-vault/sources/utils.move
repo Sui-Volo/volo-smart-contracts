@@ -11,6 +11,7 @@ const ORACLE_DECIMALS: u256 = 1_000_000_000_000_000_000; // 10^18
 
 // Combina a TypeName with an ID to generate its unique name
 // E.g. NaviAccountCap1, NaviAccountCap2, etc.
+#[allow(deprecated_usage)]
 public fun parse_key<T>(idx: u8): AsciiString {
     let type_name_string_ascii = type_name::get<T>().into_string();
     let mut type_name_string = string::from_ascii(type_name_string_ascii);

@@ -7,6 +7,7 @@ use sui::coin::Coin;
 use volo_vault::receipt::Receipt;
 use volo_vault::reward_manager::RewardManager;
 use volo_vault::vault::Vault;
+use volo_vault::receipt_cancellation;
 
 // ---------------------  Errors  ---------------------//
 const ERR_INSUFFICIENT_BALANCE: u64 = 4_001;
@@ -96,6 +97,8 @@ public fun cancel_deposit<PrincipalCoinType>(
     ctx: &mut TxContext,
 ): Coin<PrincipalCoinType> {
     vault.assert_vault_receipt_matched(receipt);
+    vault.assert_normal();
+    receipt_cancellation::assert_receipt_can_be_cancelled(receipt);
 
     let coin = vault.cancel_deposit(clock, request_id, receipt.receipt_id(), ctx.sender());
 
@@ -181,6 +184,7 @@ public fun cancel_withdraw<PrincipalCoinType>(
     ctx: &mut TxContext,
 ): u256 {
     vault.assert_vault_receipt_matched(receipt);
+    vault.assert_normal();
 
     let cancelled_shares = vault.cancel_withdraw(
         clock,

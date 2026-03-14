@@ -1,0 +1,41 @@
+name: Test Flow
+on: [push]
+
+env:
+  SUI_CLI_LOG_FILE_ENABLE: 1
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Update apt-get
+        run: sudo apt-get update
+
+      - name: Install wget
+        run: sudo apt-get install wget -y
+
+      - name: Install sui command line
+        run: sudo wget -O - "https://github.com/MystenLabs/sui/releases/download/mainnet-v${{ vars.SUI_CLI_VERSION }}/sui-mainnet-v${{ vars.SUI_CLI_VERSION }}-ubuntu-x86_64.tgz" | tar -xzf - -C .
+
+      - name: Initialize sui command line
+        run: ./sui client envs < input.txt > tmp.log
+
+      - name: Authenticate with GitHub token
+        run: echo "${{ secrets.GH_PAT }}" | gh auth login --with-token
+
+      - name: Configure git
+        run: git config --global url."https://${{ secrets.GH_PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+
+      - name: Building lending_core
+        run: ./sui move build -p `pwd`/lending_core
+
+      - name: Run unit tests for lending_core
+        run: ./sui move test -p `pwd`/lending_core
+
+      - name: Building oracle
+        run: ./sui move build -p `pwd`/oracle
+
+      - name: Run unit tests for oracle
+        run: ./sui move test -p `pwd`/oracle

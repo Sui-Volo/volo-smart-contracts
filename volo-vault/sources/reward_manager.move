@@ -1,3 +1,4 @@
+#[allow(deprecated_usage)]
 module volo_vault::reward_manager;
 
 use std::type_name::{Self, TypeName};
@@ -26,7 +27,9 @@ use volo_vault::vault_utils;
 
 // ---------------------  Constants  ---------------------//
 
-const VERSION: u64 = 1;
+// const VERSION: u64 = 1;
+// ^(v1.1 upgrade - new)
+const VERSION: u64 = 3;
 
 const NORMAL_STATUS: u8 = 0;
 
@@ -239,6 +242,7 @@ public fun add_new_reward_type<PrincipalCoinType, RewardCoinType>(
 ) {
     self.check_version();
     vault::assert_operator_not_freezed(operation, cap);
+    vault::assert_single_vault_operator_paired(operation, self.vault_id, cap);
 
     let reward_type = type_name::get<RewardCoinType>();
 
@@ -281,6 +285,7 @@ public fun create_reward_buffer_distribution<PrincipalCoinType, RewardCoinType>(
 ) {
     self.check_version();
     vault::assert_operator_not_freezed(operation, cap);
+    vault::assert_single_vault_operator_paired(operation, self.vault_id, cap);
 
     let buffer = &mut self.reward_buffer;
     let reward_type = type_name::get<RewardCoinType>();
@@ -316,7 +321,9 @@ public fun remove_reward_buffer_distribution<PrincipalCoinType>(
 ) {
     self.check_version();
     assert!(self.vault_id == vault.vault_id(), ERR_REWARD_MANAGER_VAULT_MISMATCH);
+
     vault::assert_operator_not_freezed(operation, cap);
+    vault::assert_single_vault_operator_paired(operation, self.vault_id, cap);
 
     self.update_reward_buffer(vault, clock, reward_type);
 
@@ -346,7 +353,9 @@ public fun add_reward_balance<PrincipalCoinType, RewardCoinType>(
 ) {
     self.check_version();
     assert!(self.vault_id == vault.vault_id(), ERR_REWARD_MANAGER_VAULT_MISMATCH);
+
     vault::assert_operator_not_freezed(operation, cap);
+    vault::assert_single_vault_operator_paired(operation, self.vault_id, cap);
 
     let reward_type = type_name::get<RewardCoinType>();
     let reward_amount = vault_utils::to_decimals(reward.value() as u256);
@@ -386,7 +395,9 @@ public fun add_reward_to_buffer<PrincipalCoinType, RewardCoinType>(
 ) {
     self.check_version();
     assert!(self.vault_id == vault.vault_id(), ERR_REWARD_MANAGER_VAULT_MISMATCH);
+
     vault::assert_operator_not_freezed(operation, cap);
+    vault::assert_single_vault_operator_paired(operation, self.vault_id, cap);
 
     let reward_type = type_name::get<RewardCoinType>();
     let reward_amount = vault_utils::to_decimals(reward.value() as u256);
@@ -422,7 +433,9 @@ public fun set_reward_rate<PrincipalCoinType, RewardCoinType>(
 ) {
     self.check_version();
     assert!(self.vault_id == vault.vault_id(), ERR_REWARD_MANAGER_VAULT_MISMATCH);
+
     vault::assert_operator_not_freezed(operation, cap);
+    vault::assert_single_vault_operator_paired(operation, self.vault_id, cap);
 
     // assert!(rate >= DECIMALS, ERR_RATE_DECIMALS_TOO_SMALL);
     assert!(rate < std::u256::max_value!() / 86_400_000, ERR_INVALID_REWARD_RATE);
@@ -671,7 +684,9 @@ public fun retrieve_undistributed_reward<PrincipalCoinType, RewardCoinType>(
 ): Balance<RewardCoinType> {
     self.check_version();
     assert!(self.vault_id == vault.vault_id(), ERR_REWARD_MANAGER_VAULT_MISMATCH);
+
     vault::assert_operator_not_freezed(operation, cap);
+    vault::assert_single_vault_operator_paired(operation, self.vault_id, cap);
 
     let reward_type = type_name::get<RewardCoinType>();
 

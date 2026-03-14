@@ -99,3 +99,93 @@ source = { git = "https://github.com/naviprotocol/supra-oracle.git", subdir = "s
 use_environment = "mainnet"
 manifest_digest = "6972115A9F4DCD60D13D7BB34F2D42245F8743B737EA8651F3DF6669BC3D6C93"
 deps = { Sui = "Sui_2", supra_utils = "supra_utils" }
+
+[pinned.testnet.MoveStdlib]
+source = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/move-stdlib", rev = "655576caa3d7faaed39ebbc15d1bcc91d0761aee" }
+use_environment = "testnet"
+manifest_digest = "C4FE4C91DE74CBF223B2E380AE40F592177D21870DC2D7EB6227D2D694E05363"
+deps = {}
+
+[pinned.testnet.MoveStdlib_1]
+source = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/move-stdlib", rev = "a9a6825eaf6273cc819ee3bcf65fd4909f7624a9" }
+use_environment = "testnet"
+manifest_digest = "C4FE4C91DE74CBF223B2E380AE40F592177D21870DC2D7EB6227D2D694E05363"
+deps = {}
+
+[pinned.testnet.Pyth]
+source = { git = "https://github.com/naviprotocol/pyth-crosschain.git", subdir = "target_chains/sui/contracts", rev = "1880b24c6acfaac101747f863c5047fff9adaa0f" }
+use_environment = "testnet"
+manifest_digest = "485F78616CB77F1A3EA3FC932926DF0B5411D2758EE2BAFA4C4652A4EF06D29B"
+deps = { Sui = "Sui_1", Wormhole = "Wormhole" }
+
+[pinned.testnet.Sui]
+source = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "655576caa3d7faaed39ebbc15d1bcc91d0761aee" }
+use_environment = "testnet"
+manifest_digest = "7AFB66695545775FBFBB2D3078ADFD084244D5002392E837FDE21D9EA1C6D01C"
+deps = { MoveStdlib = "MoveStdlib" }
+
+[pinned.testnet.SuiSystem]
+source = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-system", rev = "655576caa3d7faaed39ebbc15d1bcc91d0761aee" }
+use_environment = "testnet"
+manifest_digest = "F1655B9F9B8ECE67FDBA648266DD75B48852F63BF2515856E822586882D1CA2A"
+deps = { MoveStdlib = "MoveStdlib", Sui = "Sui" }
+
+[pinned.testnet.Sui_1]
+source = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "a9a6825eaf6273cc819ee3bcf65fd4909f7624a9" }
+use_environment = "testnet"
+manifest_digest = "7AFB66695545775FBFBB2D3078ADFD084244D5002392E837FDE21D9EA1C6D01C"
+deps = { MoveStdlib = "MoveStdlib_1" }
+
+[pinned.testnet.SupraOracle]
+source = { git = "https://github.com/naviprotocol/supra-oracle.git", subdir = "supra_holder", rev = "0d41a846e75cff18da44e462260bf60c73417c8e" }
+use_environment = "testnet"
+manifest_digest = "9C02A35D78AABF65198AAF05ECD1263DA17CF8CDC9057DBD530C7A2EEC5B1DF4"
+deps = { Sui = "Sui_1", supra_validator = "supra_validator" }
+
+[pinned.testnet.Switchboard]
+source = { git = "https://github.com/naviprotocol/navi-smart-contracts", subdir = "switchboard_sui/on_demand", rev = "473b0934235d6dc1357fa4309308167c6d175fd1" }
+use_environment = "testnet"
+manifest_digest = "DEE42C89BB3F8EC67C17BC4AE0CEBE14A28F4FA787E857046EAF0FA38D556496"
+deps = { Sui = "Sui_1" }
+
+[pinned.testnet.Wormhole]
+source = { git = "https://github.com/naviprotocol/wormhole.git", subdir = "sui/wormhole", rev = "7749aff1380b0f63743d36856a5934de606483ba" }
+use_environment = "testnet"
+manifest_digest = "C2772B976EC6A56C32071C116C869B6B810C731713A3E79642606E99AE1F55DA"
+deps = { Sui = "Sui_1" }
+
+[pinned.testnet.lending_core]
+source = { git = "https://github.com/naviprotocol/navi-smart-contracts", subdir = "lending_core", rev = "473b0934235d6dc1357fa4309308167c6d175fd1" }
+use_environment = "testnet"
+manifest_digest = "8461A2F7EC69D23AC78A5B024016935BA2B5C8438B34749CAFFFFA75F52C780A"
+deps = { liquid_staking = "liquid_staking", oracle = "oracle", std = "MoveStdlib", sui = "Sui", sui_system = "SuiSystem" }
+
+[pinned.testnet.limiter]
+source = { root = true }
+use_environment = "testnet"
+manifest_digest = "824985FEE3E505BD48AFE7DDC0DB22EF6113076E3BCEF083EAEE59A3429A24AD"
+deps = { lending_core = "lending_core", oracle = "oracle", std = "MoveStdlib", sui = "Sui" }
+
+[pinned.testnet.liquid_staking]
+source = { git = "https://github.com/naviprotocol/navi-smart-contracts", subdir = "volo_liquid_staking", rev = "473b0934235d6dc1357fa4309308167c6d175fd1" }
+use_environment = "testnet"
+manifest_digest = "5E7C288BBC1CF8C7B1A36EC70D1D39D45703A5397C84D65EFD693E7EDFF41766"
+deps = { std = "MoveStdlib", sui = "Sui", sui_system = "SuiSystem" }
+
+[pinned.testnet.oracle]
+source = { git = "https://github.com/naviprotocol/navi-smart-contracts", subdir = "oracle", rev = "473b0934235d6dc1357fa4309308167c6d175fd1" }
+use_environment = "testnet"
+manifest_digest = "F5053D475DD8F9116DFA91AE142501FCE0820EC5C8D8963A9FC3DA41824E2487"
+deps = { SupraOracle = "SupraOracle", pyth = "Pyth", std = "MoveStdlib", sui = "Sui", switchboard = "Switchboard" }
+
+[pinned.testnet.supra_utils]
+source = { git = "https://github.com/naviprotocol/supra-oracle.git", subdir = "supra_utils", rev = "0d41a846e75cff18da44e462260bf60c73417c8e" }
+use_environment = "testnet"
+manifest_digest = "C2772B976EC6A56C32071C116C869B6B810C731713A3E79642606E99AE1F55DA"
+deps = { Sui = "Sui_1" }
+
+[pinned.testnet.supra_validator]
+source = { git = "https://github.com/naviprotocol/supra-oracle.git", subdir = "supra_validator", rev = "0d41a846e75cff18da44e462260bf60c73417c8e" }
+use_environment = "testnet"
+manifest_digest = "20910F73E6DB180B11201B71A872B16AED4CFEF8AAE1428E33839CB5860A569E"
+deps = { Sui = "Sui_1", supra_utils = "supra_utils" }

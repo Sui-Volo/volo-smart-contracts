@@ -1,0 +1,146 @@
+{
+  "zo_staking": {
+    "pools": [
+      "0x283291d471764236db56b692f4f890c4d244a2891c478ee16c7e5076b6ad0fa7",
+      "0x7afc8737b6b70e1719f63c6f8765e4565ea02e208301b8ec5d5666684b0a7152",
+      "0x977682dfb66158e6fb7fdcac7dd89a162e13fae6a8555b2a1e04d71c525c2578"
+    ],
+    "upgrade_cap": "0x0b2ebbdedd751039cf033c1b24f61069b26cb2f99523789e150b5db59f13ccfd",
+    "package": "0x87c13bb9157c3d51d61c7802704539d9d4782e838aadc41df0d6f0cc117298ba",
+    "upgraded_package": "0xe9b70b5226ba0fd66fda923475c82aa4d7c43372d3762a80df5b01f3851fea36",
+    "admin_cap": "0xe339faca7f7558bdf8256e7174d0543e5db99befcd0e5b9bef9c421cecabc195",
+    "acl_control": "0x2de40211db8cc6aac0fe01acd8ea53943a577fa9ce13e0419ef1b821b75c8b9b"
+  },
+  "coin_modules": {
+    "usdz": {
+      "decimals": 6,
+      "module": "0x7fd8aba1652c58b6397c799fd375e748e5053145cb7e126d303e0a1545fd1fec::usdz::USDZ",
+      "metadata": "0xdeb8f360689e4368177e4579bd0136404a962f115d6d0047ad42ae374c3d4e9c"
+    },
+    "slp": {
+      "decimals": 6,
+      "module": "0xc44d97a4bc4e5a33ca847b72b123172c88a6328196b71414f32c3070233604b2::slp::SLP",
+      "metadata": "0xaa1c21d59252f4b790faf9ab1c3a9fac5be59b612688c0ec2e24807d6cf9f626"
+    },
+    "zlp": {
+      "decimals": 6,
+      "module": "0xf7fade57462e56e2eff1d7adef32e4fd285b21fd81f983f407bb7110ca766cda::zlp::ZLP",
+      "metadata": "0x56ac290ccd673210deed95c06ad4bd7b9e882fd9c4116bbf03b6d3e74a63bc1f"
+    },
+    "sui": {
+      "decimals": 9,
+      "module": "0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI",
+      "metadata": "0x9258181f5ceac8dbffb7030890243caed69a9599d2886d957a9cb7656af3bdb3"
+    },
+    "btc": {
+      "decimals": 8,
+      "module": "0x027792d9fed7f9844eb4839566001bb6f6cb4804f66aa2da6fe1ee242d896881::coin::COIN",
+      "metadata": "0x5d3c6e60eeff8a05b693b481539e7847dfe33013e7070cdcb387f5c0cac05dfd"
+    },
+    "eth": {
+      "decimals": 8,
+      "module": "0xaf8cd5edc19c4512f4259f0bee101a40d41ebed738ade5874359610ef8eeced5::coin::COIN",
+      "metadata": "0x8900e4ceede3363bef086d6b50ca89d816d0e90bf6bc46efefe1f8455e08f50f"
+    },
+    "nusdc": {
+      "decimals": 6,
+      "module": "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
+      "metadata": "0x69b7a7c3c200439c1b5f3b19d7d495d5966d5f08de66c69276152f8db3992ec6"
+    },
+    "usdt": {
+      "decimals": 6,
+      "module": "0xc060006111016b8a020ad5b33834984a437aaa7d3c74c18e09a95d48aceab08c::coin::COIN",
+      "metadata": "0xfb0e3eb97dd158a5ae979dddfa24348063843c5b20eb8381dd5fa7c93699e45c"
+    },
+    "deep": {
+      "decimals": 6,
+      "module": "0xdeeb7a4662eec9f2f3def03fb937a663dddaa2e215b8078a284d026b7946c270::deep::DEEP",
+      "metadata": "0x6e60b051a08fa836f5a7acd7c464c8d9825bc29c44657fe170fe9b8e1e4770c0"
+    },
+    "wal": {
+      "decimals": 9,
+      "module": "0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL",
+      "metadata": "0xcf8a31804ae40cb3e7183fe57320f87467a7750d4fa701bca1ffbb1edd37781e"
+    },
+    "xrp": {
+      "decimals": 6,
+      "module": "0x8592d41b28815030c40cae43bf30a3f75657e57e6028a05c1b56e5f236b1416e::xrp::XRP",
+      "metadata": "0x69004e9f9a4981fdee2f3050cf99c7d2f2a7e45b871da2cc056a850e6bf818b3"
+    },
+    "sol": {
+      "decimals": 8,
+      "module": "0xb7844e289a8410e50fb3ca48d69eb9cf29e27d223ef90353fe1bd8e27ff8f3f8::coin::COIN",
+      "metadata": "0x4d2c39082b4477e3e79dc4562d939147ab90c42fc5f3e4acf03b94383cd69b6e"
+    },
+    "doge": {
+      "decimals": 8,
+      "module": "0xe364a361406e7ab4ea4ec17cc4840b18737dd20bd7124a82130aa21422b8fc20::doge::DOGE",
+      "metadata": "0xf3da270f549dd26d1d2dd251961d46919d3abb3044a98ef0fd7dd914d3cc9159"
+    },
+    "hype": {
+      "decimals": 8,
+      "module": "0xea2748c16bb45cac2d2602d6ad25089d24a814abc9495c0210b8b856617c4e66::hype::HYPE",
+      "metadata": "0xc23c06733cab74bd55febf4f7f8a26234385974b048b95a254d2cbd7fde256b2"
+    },
+    "ondo": {
+      "decimals": 8,
+      "module": "0xfe7d492e5c3fd9c88ac859d4d37179e301ce78104da40e44ea7bb38911d4ae0a::ondo::ONDO",
+      "metadata": "0xa340ffa4f80fc2b4df43f469fb5088b396c20624ee6b54024052977f49be9f82"
+    },
+    "trump": {
+      "decimals": 6,
+      "module": "0xbac9a286efdb3520c76c2cbff789ad42c0834c857c3a249915b10d8b5bf8afac::trump::TRUMP",
+      "metadata": "0xdea3d7c4b12833a89edd5f04921e800a6e34f9e8256dc514979855d5084212ba"
+    },
+    "cetus": {
+      "decimals": 9,
+      "module": "0x06864a6f921804860930db6ddbe2e16acdf8504495ea7481637a1c8b9a8fe54b::cetus::CETUS",
+      "metadata": "0x4c0dce55eff2db5419bbd2d239d1aa22b4a400c01bbb648b058a9883989025da"
+    },
+    "haedal": {
+      "decimals": 9,
+      "module": "0x3a304c7feba2d819ea57c3542d68439ca2c386ba02159c740f7b406e592c62ea::haedal::HAEDAL",
+      "metadata": "0xcc89fcc22f0d13de3688b94fa16d64a22079186a941914280c67101ff754263c"
+    },
+    "aave": {
+      "decimals": 8,
+      "module": "0x398e363d2b93ecb615ca36687657d71bd5cb590b5ebd6c3033ad6956a62b1ca4::aave::AAVE",
+      "metadata": "0x0d9fbea2ed02fffc738a5c0bb61ec09cfd5388ac3095a1f0abc99b30a64cb45e"
+    },
+    "ada": {
+      "decimals": 8,
+      "module": "0xe0195a3d560e332aba28b4a3aa91c9430c76cc4be0cc43a46015879597b6d338::ada::ADA",
+      "metadata": "0x8a87d822e41044f8285127674c0fff2c0598d473dc75f6695ef729bf4caeef27"
+    },
+    "avax": {
+      "decimals": 8,
+      "module": "0xdbb90a6e799340738f9a500f955d9053eb54c1011691e27f58cb98762b290c81::avax::AVAX",
+      "metadata": "0x33dfac0409b0c134ef11e76f0e71839cb43f957315c69e678398abadc21e3160"
+    },
+    "fartcoin": {
+      "decimals": 9,
+      "module": "0xebda4656236c29b3a4472f35ae6a4a27e17b65259611d549b5b260e2f8e5abe2::fartcoin::FARTCOIN",
+      "metadata": "0x7a5a0e1dd1d9d8776b5312fd3f14e91d36ee02e97874df768b3b2cd16794ea17"
+    },
+    "jup": {
+      "decimals": 8,
+      "module": "0x31095ed9f80427b69635cde750237c3bd98aa806efd31306e13c50ae0b12a500::jup::JUP",
+      "metadata": "0x487f2f60529f8dbc41cff75e2f5cf8ebafb86e09f97c5c6df6a8cf7cbbdc04e6"
+    },
+    "paxg": {
+      "decimals": 8,
+      "module": "0xa613dcbd506ac7c0f5fd5574e26eaa53c2279bfcbae7e4541af98d697ef9a786::paxg::PAXG",
+      "metadata": "0x9ae44fdc2ddd13581c26d913d9fa43e47dd66a347cb7bb6f93036efd2eec9ab4"
+    },
+    "spx": {
+      "decimals": 9,
+      "module": "0x9f08c77e89af768d7ee5accf8b66b07d606a84b5939e6896a1ae92d519523eac::spx::SPX",
+      "metadata": "0x0400c0f644c94372c3784eba220402cba968659b7e16d640e455b4c72c5cc02c"
+    },
+    "bnb": {
+      "decimals": 8,
+      "module": "0x10cb719b69a7f529600e7238460944c3932f98a2a95b48a0728ac3bbb9c95534::bnb::BNB",
+      "metadata": "0xcfa4b4e79c836c7c278b7a8675e6fcc8356d6701871371b364fc4af01ac7fba7"
+    }
+  }
+}
