@@ -12,6 +12,7 @@ use volo_vault::vault_manage;
 use volo_vault::vault_oracle;
 
 const OWNER: address = @0xa;
+#[allow(unused_const)]
 const ALICE: address = @0xb;
 const BOB: address = @0xc;
 

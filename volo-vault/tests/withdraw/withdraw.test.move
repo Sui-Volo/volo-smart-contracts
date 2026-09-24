@@ -20,7 +20,7 @@ const ALICE: address = @0xb;
 // const BOB: address = @0xc;
 
 const ORACLE_DECIMALS: u256 = 1_000_000_000_000_000_000; // 18 decimals
-
+#[allow(unused_const)]
 const NORMAL_STATUS: u8 = 0;
 const PENDING_DEPOSIT_STATUS: u8 = 1;
 const PENDING_WITHDRAW_STATUS: u8 = 2;

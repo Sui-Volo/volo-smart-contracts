@@ -14,6 +14,7 @@ module liquid_staking::cert {
     use sui::object::{Self, UID};
     use sui::event;
     use liquid_staking::ownership::{OwnerCap};
+     use sui::coin_registry;
 
     /* friend liquid_staking::native_pool; */
 
@@ -45,26 +46,48 @@ module liquid_staking::cert {
         total_supply: Supply<T>,
     }
 
-    /// Register the currency and destroy its `TreasuryCap`. Because
-    /// this is a module initializer, it ensures the currency only gets
-    /// registered once.
-    fun init(witness: CERT, ctx: &mut TxContext) {
-        // create coin with metadata
-        let (treasury_cap, metadata) = coin::create_currency<CERT>(
-            witness, DECIMALS, b"vSUI", b"Volo Staked SUI",
-            b"Volo's SUI staking solution provides the best user experience and highest level of decentralization, security, combined with an attractive reward mechanism and instant staking liquidity through a bond-like synthetic token called voloSUI.",
-            option::some<Url>(url::new_unsafe_from_bytes(b"https://volo.fi/vSUI.png")),
-            ctx
-        );
-        transfer::public_freeze_object(metadata);
-        // destroy treasury_cap and store it custom Metadata object
-        let supply = coin::treasury_into_supply(treasury_cap);
-        transfer::share_object(Metadata<CERT> {
-                id: object::new(ctx),
-                version: VERSION,
-                total_supply: supply,
-        });
-    }
+ /// Create the currency using the one-time witness.
+/// The TreasuryCap is converted into Supply and stored in custom Metadata.
+fun init(witness: CERT, ctx: &mut TxContext) {
+    let (builder, treasury_cap) = coin_registry::new_currency_with_otw(
+        witness,
+        DECIMALS,
+        b"vSUI".to_string(),
+        b"Volo Staked SUI".to_string(),
+        b"Volo's SUI staking solution provides the best user experience and highest level of decentralization, security, combined with an attractive reward mechanism and instant staking liquidity through a bond-like synthetic token called voloSUI.".to_string(),
+        b"https://volo.fi/vSUI.png".to_string(),
+        ctx
+    );
+
+    let supply = coin::treasury_into_supply(treasury_cap);
+
+    coin_registry::finalize_and_delete_metadata_cap(builder, ctx);
+
+    transfer::share_object(Metadata<CERT> {
+        id: object::new(ctx),
+        version: VERSION,
+        total_supply: supply,
+    });
+}
+
+//@deprecated
+    // fun init(witness: CERT, ctx: &mut TxContext) {
+    //     // create coin with metadata
+    //     let (treasury_cap, metadata) = coin::create_currency<CERT>(
+    //         witness, DECIMALS, b"vSUI", b"Volo Staked SUI",
+    //         b"Volo's SUI staking solution provides the best user experience and highest level of decentralization, security, combined with an attractive reward mechanism and instant staking liquidity through a bond-like synthetic token called voloSUI.",
+    //         option::some<Url>(url::new_unsafe_from_bytes(b"https://volo.fi/vSUI.png")),
+    //         ctx
+    //     );
+    //     transfer::public_freeze_object(metadata);
+    //     // destroy treasury_cap and store it custom Metadata object
+    //     let supply = coin::treasury_into_supply(treasury_cap);
+    //     transfer::share_object(Metadata<CERT> {
+    //             id: object::new(ctx),
+    //             version: VERSION,
+    //             total_supply: supply,
+    //     });
+    // }
 
     /* Metadata read methods */
 

@@ -105,7 +105,7 @@ fun suilend_compound_interest<ObligationType>(
 fun get_reserve_array_indicies<ObligationType>(
     obligation: &Obligation<ObligationType>,
 ): vector<u64> {
-    let mut array_indices = vector::empty<u64>();
+    let mut array_indices = vector<u64>[];
 
     obligation.deposits().do_ref!(|deposit| {
         vector::push_back(&mut array_indices, deposit.reserve_array_index());

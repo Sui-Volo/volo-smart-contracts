@@ -132,5 +132,5 @@ public fun destroy_price_info_object(price_info_object: PriceInfoObject) {
 }
 
 public fun destroy_state(pyth_state: State) {
-    test_utils::destroy(pyth_state)
+    std::unit_test::destroy(pyth_state)
 }

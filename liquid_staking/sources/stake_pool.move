@@ -607,7 +607,7 @@ module liquid_staking::stake_pool {
 
     // publish ratio in volo v1 format(1e18) 
     public fun publish_ratio(self: &StakePool, metadata: &Metadata<CERT>) {
-        let e9 = 1_000_000_000;
+        let e9 = 1_000_000_000u64;
         let e18_ratio = (self.get_ratio(metadata) as u256) * (e9 as u256);
 
         emit_ratio(e18_ratio)

@@ -289,7 +289,8 @@ public fun create_curator_position<PrincipalCoinType>(
 
     // Init curator position info
     self.curator_position_to_vault.add(id_address, vault_id);
-    self.curator_position_to_curator_caps.add(id_address, vector::singleton(curator_cap_id));
+    self.curator_position_to_curator_caps.add(id_address, vector[curator_cap_id]
+    );
     self
         .curator_position_values
         .add(
@@ -328,7 +329,7 @@ fun bind_vault_curator_position(
     curator_position_id: address,
 ) {
     let key = VaultCuratorPositionKey { vault_id: vault_id };
-    assert!(!df::exists_(&self.id, key), ERR_VAULT_ALREADY_HAS_CURATOR_POSITION);
+    assert!(!df::exists(&self.id, key), ERR_VAULT_ALREADY_HAS_CURATOR_POSITION);
     df::add(&mut self.id, key, curator_position_id);
 
     emit(VaultCuratorPositionBound {
@@ -383,7 +384,7 @@ public(package) fun set_curator_cap_paired_with_position(
     curator_position_pairs.add(curator_cap_id, curator_position_id);
 
     if (!curator_position_to_curator_caps.contains(curator_position_id)) {
-        curator_position_to_curator_caps.add(curator_position_id, vector::empty<address>());
+        curator_position_to_curator_caps.add(curator_position_id, vector<address>[]);
     };
     curator_position_to_curator_caps.borrow_mut(curator_position_id).push_back(curator_cap_id);
 

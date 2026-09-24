@@ -36,8 +36,8 @@ public fun create_mock_position<CoinTypeA, CoinTypeB>(
 ): MockCetusPosition<CoinTypeA, CoinTypeB> {
     let position = MockCetusPosition {
         id: object::new(ctx),
-        coin_type_a: type_name::get<CoinTypeA>(),
-        coin_type_b: type_name::get<CoinTypeB>(),
+        coin_type_a: type_name::with_defining_ids<CoinTypeA>(),
+        coin_type_b: type_name::with_defining_ids<CoinTypeB>(),
         token_a_amount: 0,
         token_b_amount: 0,
     };
@@ -49,8 +49,8 @@ public fun calculate_cetus_position_value<CoinTypeA, CoinTypeB>(
     config: &OracleConfig,
     clock: &Clock,
 ): u256 {
-    let type_name_a = type_name::get<CoinTypeA>().into_string();
-    let type_name_b = type_name::get<CoinTypeB>().into_string();
+    let type_name_a = type_name::with_defining_ids<CoinTypeA>().into_string();
+    let type_name_b = type_name::with_defining_ids<CoinTypeB>().into_string();
 
     let amount_a = position.token_a_amount;
     let amount_b = position.token_b_amount;

@@ -77,7 +77,7 @@ module liquid_staking::validator_pool {
     public(package) fun new(ctx: &mut TxContext): ValidatorPool {
         ValidatorPool {
             sui_pool: balance::zero(),
-            validator_infos: vector::empty(),
+            validator_infos: vector[],
             total_sui_supply: 0,
             last_refresh_epoch: ctx.epoch() - 1,
             total_weight: 0,
@@ -347,7 +347,7 @@ module liquid_staking::validator_pool {
     ) {
         self.manage.check_version();
 
-        let v_size = validator_weights.size();
+        let v_size = validator_weights.length();
         assert!(v_size <= MAX_VALIDATORS, ETooManyValidators);
 
         let mut total_weight = 0;
@@ -372,9 +372,9 @@ module liquid_staking::validator_pool {
         self: &ValidatorPool,
         validator_weights: VecMap<address, u64>,
     ) {
-        let mut weight_sum = 0;
-        let mut match_num = 0;
-        let mut non_zero_weights_count = 0;
+        let mut weight_sum = 0u64;
+        let mut match_num = 0u64;
+        let mut non_zero_weights_count = 0u64;
 
         self.validator_infos.do_ref!(|validator| {
             weight_sum = weight_sum + validator.assigned_weight;
@@ -387,7 +387,7 @@ module liquid_staking::validator_pool {
         });
 
         // Count validators with non-zero weights in the input
-        let v_size = validator_weights.size();
+        let v_size = validator_weights.length();
         v_size.do!(|i| {
             let (_, weight) = validator_weights.get_entry_by_idx(i);
             if (*weight > 0) {

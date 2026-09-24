@@ -597,7 +597,7 @@ module liquid_staking::native_pool {
 
     const CAP_CREATED: vector<u8> = b"cap_created";
     public(package) fun mark_cap_created(self: &mut NativePool) {
-        if (dynamic_field::exists_<vector<u8>>(&self.id, CAP_CREATED)) {
+        if (dynamic_field::exists<vector<u8>>(&self.id, CAP_CREATED)) {
             abort 0;
         };
         dynamic_field::add(&mut self.id, CAP_CREATED, true);

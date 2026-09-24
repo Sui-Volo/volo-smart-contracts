@@ -63,7 +63,7 @@ module liquid_staking::validator_set {
             id: object::new(ctx),
             vaults: table::new<address, Vault>(ctx),
             validators: vec_map::empty<address, u64>(),
-            sorted_validators: vector::empty<address>(),
+            sorted_validators: vector<address>[],
             is_sorted: false,
         }
     }
@@ -82,7 +82,7 @@ module liquid_staking::validator_set {
     public fun get_bad_validators(self: &ValidatorSet): vector<address> {
         let len = vector::length(&self.sorted_validators);
         assert!(vector::length(&self.sorted_validators) != 0, E_NO_ACTIVE_VLDRS);
-        let mut res = vector::empty<address>();
+        let mut res = vector<address>[];
 
         let mut i = 0;
 
@@ -114,8 +114,8 @@ module liquid_staking::validator_set {
 
     public(package) fun sort_validators(self: &mut ValidatorSet) {
         let mut i = 0;
-        let len = vec_map::size<address, u64>(&self.validators);
-        let mut sorted = vector::empty<address>();
+        let len = vec_map::length<address, u64>(&self.validators);
+        let mut sorted = vector<address>[];
         while (i < len) {
             let (vldr_address_ref, vldr_prior_ref) = vec_map::get_entry_by_idx(&self.validators, i);
             let vldr_prior = *vldr_prior_ref;
@@ -168,7 +168,7 @@ module liquid_staking::validator_set {
             self.is_sorted = false;
         };
 
-        assert!(vec_map::size(&self.validators) < MAX_VLDRS_UPDATE, E_TOO_MANY_VLDRS);
+        assert!(vec_map::length(&self.validators) < MAX_VLDRS_UPDATE, E_TOO_MANY_VLDRS);
     }
 
     fun update_validator(self: &mut ValidatorSet, validator: address, priority: u64) {

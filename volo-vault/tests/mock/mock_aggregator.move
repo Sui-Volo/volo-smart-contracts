@@ -12,7 +12,7 @@ public fun create_mock_aggregator(ctx: &mut TxContext): Aggregator {
         aggregator::example_queue_id(),
         string::utf8(b"test_aggregator"),
         OWNER,
-        vector::empty(),
+        vector[],
         3,
         1000000000000000,
         100000000000,

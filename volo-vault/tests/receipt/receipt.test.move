@@ -76,7 +76,7 @@ public fun test_create_receipt() {
         let unclaimed_rewards_mut = vault_receipt_info.unclaimed_rewards_mut();
         assert!(unclaimed_rewards_mut.length() == 0);
 
-        let type_names = vector[type_name::get<SUI_TEST_COIN>()];
+        let type_names = vector[type_name::with_defining_ids<SUI_TEST_COIN>()];
         let rewards = vault_receipt_info.get_receipt_rewards(type_names);
         assert!(rewards.length() == 1);
 

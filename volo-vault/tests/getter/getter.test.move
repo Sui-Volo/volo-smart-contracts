@@ -80,7 +80,7 @@ public fun test_getter_epoch_loss() {
     s.end();
 }
 
-#[test]
+#[test,allow(unused_variable)]
 // [TEST-CASE: Should parse key.] @test-case GETTER-003
 public fun test_parse_key() {
     let s = test_scenario::begin(OWNER);

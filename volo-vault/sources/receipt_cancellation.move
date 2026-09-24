@@ -74,7 +74,7 @@ public fun receipt_can_be_cancelled(receipt: &Receipt): bool {
     let dynamic_field_key = ReceiptCanBeCancelledFieldKey {};
     let mut can_be_cancelled = true;
 
-    if (dynamic_field::exists_(receipt.receipt_uid(), dynamic_field_key)) {
+    if (dynamic_field::exists(receipt.receipt_uid(), dynamic_field_key)) {
         let dynamic_field_value = dynamic_field::borrow<
             ReceiptCanBeCancelledFieldKey,
             ReceiptCanBeCancelled,
@@ -143,7 +143,7 @@ public fun vault_receipt_info_can_be_cancelled<PrincipalCoinType>(
     let dynamic_field_key = ReceiptCanBeCancelledFieldKey {};
     let mut can_be_cancelled = true;
 
-    if (dynamic_field::exists_(vault.vault_uid(), dynamic_field_key)) {
+    if (dynamic_field::exists(vault.vault_uid(), dynamic_field_key)) {
         let dynamic_field_value = dynamic_field::borrow<
             ReceiptCanBeCancelledFieldKey,
             VaultReceiptCanBeCancelled,

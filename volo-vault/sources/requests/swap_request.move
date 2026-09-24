@@ -103,7 +103,7 @@ public(package) fun try_delete_withdraw_swap_request<PrincipalCoinType>(
     request_id: u64,
 ) {
     let key = WithdrawSwapRequestDynamicFieldKey {};
-    if (!dynamic_field::exists_(vault.vault_id_mut(), key)) {
+    if (!dynamic_field::exists(vault.vault_id_mut(), key)) {
         return
     };
     let field = dynamic_field::borrow_mut<
